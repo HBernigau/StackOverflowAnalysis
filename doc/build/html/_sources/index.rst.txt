@@ -13,6 +13,7 @@ Welcome to SO_analysis's documentation!
    incl/intro
    incl/how_to_run
    incl/Architecture
+   incl/user_guide
    incl/API_doc.rst
 
 

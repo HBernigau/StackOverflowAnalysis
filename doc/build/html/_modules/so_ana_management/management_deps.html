@@ -77,8 +77,12 @@
 <span class="kn">from</span> <span class="nn">dependency_injector</span> <span class="kn">import</span> <span class="n">containers</span><span class="p">,</span> <span class="n">providers</span>
 <span class="kn">import</span> <span class="nn">ipaddress</span>
 
+<span class="kn">import</span> <span class="nn">so_ana_util</span>
+
+
 <div class="viewcode-block" id="get_scheduler_address"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_deps.get_scheduler_address">[docs]</a><span class="k">def</span> <span class="nf">get_scheduler_address</span><span class="p">(</span><span class="n">ip_address</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
     <span class="k">return</span> <span class="sa">r</span><span class="s1">&#39;tcp://&#39;</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">format</span><span class="p">(</span><span class="n">ip_address</span><span class="p">)</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span></div>
+
 
 <div class="viewcode-block" id="Prod_container"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_deps.Prod_container">[docs]</a><span class="k">class</span> <span class="nc">Prod_container</span><span class="p">(</span><span class="n">containers</span><span class="o">.</span><span class="n">DeclarativeContainer</span><span class="p">):</span>
 
@@ -89,9 +93,10 @@
 
 
 <div class="viewcode-block" id="get_prod_container"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_deps.get_prod_container">[docs]</a><span class="k">def</span> <span class="nf">get_prod_container</span><span class="p">():</span>
+    <span class="n">dask_config</span> <span class="o">=</span> <span class="n">so_ana_util</span><span class="o">.</span><span class="n">get_main_config</span><span class="p">()[</span><span class="s1">&#39;dask_opts&#39;</span><span class="p">]</span>
     <span class="n">prod_container</span> <span class="o">=</span> <span class="n">Prod_container</span><span class="p">()</span>
-    <span class="n">prod_container</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;dask_scheduler_port&#39;</span><span class="p">:</span> <span class="mi">64828</span><span class="p">,</span>
-                                     <span class="s1">&#39;dask_server_name&#39;</span><span class="p">:</span> <span class="n">ipaddress</span><span class="o">.</span><span class="n">ip_address</span><span class="p">(</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">)})</span>
+    <span class="n">prod_container</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;dask_scheduler_port&#39;</span><span class="p">:</span> <span class="n">dask_config</span><span class="p">[</span><span class="s1">&#39;dask_port&#39;</span><span class="p">],</span>
+                                     <span class="s1">&#39;dask_server_name&#39;</span><span class="p">:</span> <span class="n">ipaddress</span><span class="o">.</span><span class="n">ip_address</span><span class="p">(</span><span class="n">dask_config</span><span class="p">[</span><span class="s1">&#39;dask_server&#39;</span><span class="p">])})</span>
     <span class="k">return</span> <span class="n">prod_container</span></div>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>

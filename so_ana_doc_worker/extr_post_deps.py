@@ -15,6 +15,8 @@ import robots
 from dataclasses import dataclass
 from circuitbreaker import circuit, CircuitBreakerMonitor
 from datetime import datetime, timedelta
+
+import so_ana_util
 from so_ana_util.common_types import get_tst_logger, get_null_logger, get_prod_logger, TstHandler
 
 
@@ -56,68 +58,10 @@ class RequResult:
     err_msg: str
     circuit_closed: bool = True
 
-class FileSystemContentDownloader(AbstractContentDownloader):
-
-    def __init__(self, path: str, logger: logging.Logger = None):
-        """
-        A content downloader that reads data from the file system (for testing purposes)
-
-        :param path: path to the files to be loaded
-        :param logger: a logger used by the downloader
-        """
-        self.src_path = path
-        self.logger = logger or get_null_logger()
-
-    @property
-    def src_path(self):
-        """the source path """
-        return self._src_dir_path
-
-    @src_path.setter
-    def src_path(self, value):
-        """setter for the source folder"""
-        if os.path.isdir(value):
-            self._src_dir_path = value
-        else:
-            raise ValueError(f'path "{value}" is not a valid directory.')
-
-    def metadata_by_topic_and_page(self, topic: str, page_nr: int) -> str:
-        """
-        see: :py:meth:`so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.metadata_by_topic_and_page`
-
-        :param topic: topic label
-        :param page_nr:
-        :return:
-        """
-        msg=''
-        try:
-            with open(os.path.join(self.src_path, f'overview_{page_nr}.html'), "r", encoding="utf-8") as f:
-                cont = f.read()
-                code = 200
-        except Exception as exc:
-            msg = f'unhandled error "{exc}" occured when trying to access topic "{topic}" an page {page_nr}'
-            self.logger.error(msg)
-            cont = ''
-            code = 942
-        return RequResult(code=code, content=cont, err_msg=msg)
-
-    def post_by_id(self, post_id: int)->str:
-        try:
-            with open(os.path.join(self.src_path, f'post_{post_id}.html'), "r", encoding="utf-8") as f:
-                cont = f.read()
-                code = 0
-                msg = ''
-        except Exception as exc:
-            msg = f'unhandled error "{exc}" occured when trying to access post_id "{post_id}"'
-            self.logger.error(msg)
-            cont = ''
-            code = 942
-
-        return RequResult(code=code, content=cont, err_msg=msg)
-
 
 class RobotsPolicyException(ValueError):
     pass
+
 
 class HTTPError(RuntimeError):
     pass
@@ -161,16 +105,18 @@ class WebContentDownloader(AbstractContentDownloader):
         self.rp = robots.RobotFileParser()
         self.requ_delay = requ_delay
         self.get_requ_data = circuit(failure_threshold=3, recovery_timeout=recovery_timeout)(get_requ_data)
-        if stack_exchange_ws == 'stackoverflow':
-            self.base_url = 'https://stackoverflow.com'
-            self.post_template = 'https://stackoverflow.com/questions/@post_id@'
-            self.meta_template = 'https://stackoverflow.com/questions/tagged/@tag@'
-        elif stack_exchange_ws == 'softwareengineering':
-            self.base_url = 'https://softwareengineering.stackexchange.com'
-            self.post_template = 'https://softwareengineering.stackexchange.com/questions/@post_id@'
-            self.meta_template = 'https://softwareengineering.stackexchange.com/questions/tagged/@tag@'
+
+        main_config = so_ana_util.get_main_config()
+
+        for (key, value) in main_config['so_urls'].items():
+            if stack_exchange_ws==key:
+                self.base_url = value['base_url']
+                self.post_template = value['post_template']
+                self.meta_template = value['meta_template']
+                break
         else:
-            raise NotImplementedError(f'Stack exchange site {stack_exchange_ws} not implemented yet.')
+            NotImplementedError(f'Stack exchange site {stack_exchange_ws} not implemented yet.')
+
         self._next_request_time = datetime.now()
 
     def _get_site(self, page_url, params=dict()):
@@ -209,19 +155,6 @@ class WebContentDownloader(AbstractContentDownloader):
     def post_by_id(self, post_id: int)->str:
         return self._get_site(self.post_template.replace('@post_id@', str(post_id)))
 
-
-class Test_container(containers.DeclarativeContainer):
-
-    config = providers.Configuration()
-
-    tst_handler = providers.Singleton(TstHandler)
-
-    smpl_logger = providers.Factory(get_tst_logger,
-                                    tst_handler = tst_handler)
-
-    page_downloader = providers.Factory(FileSystemContentDownloader,
-                                        path = config.tst_file_path,
-                                        logger = smpl_logger)
 
 class Prod_container(containers.DeclarativeContainer):
 

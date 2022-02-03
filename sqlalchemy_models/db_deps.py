@@ -14,6 +14,8 @@ from elasticsearch.serializer import JSONSerializer
 import marshmallow_dataclass as mmdc
 from typing import List
 from datetime import datetime, date
+
+import so_ana_util
 import so_ana_util.common_types as common_types
 import sqlalchemy_models.models as sqamod
 import inspect
@@ -420,33 +422,34 @@ class LazyProviderAccessObject:
 
 db_deps = DBDeps()
 
-def prod_db_deps_container(user_name: str='admin',
-                           pw: str = 'admin',
-                           server_name: str = 'localhost',
-                           port: int = 5437,
-                           db_name: str = 'SO_ANA',
-                           es_server_name: str = 'localhost',
-                           es_port: int = 9200,
-                           app_conn_name: str = 'so_ana_app',
-                           log_conn_name: str = 'so_ana_log',
-                           db_logger_name: str = 'default.db',
-                           script_logger_name: str = 'default.db',
+
+def prod_db_deps_container(user_name: typing.Optional[str] = None,
+                           pw: typing.Optional[str] = None,
+                           server_name: typing.Optional[str] = None,
+                           port: typing.Optional[int] = None,
+                           db_name: typing.Optional[str] = None,
+                           es_server_name: typing.Optional[str] = None,
+                           es_port: typing.Optional[int] = None,
+                           app_conn_name: typing.Optional[str] = None,
+                           log_conn_name: typing.Optional[str] = None,
+                           db_logger_name: typing.Optional[str] = None,
+                           script_logger_name: typing.Optional[str] = None,
                            modus: str = 'test'):
+    db_config = so_ana_util.get_main_config()['db_opts']
     lazy_access_ob = LazyProviderAccessObject(db_deps)
-    lazy_access_ob.provider.config.from_dict({ 'user_name': user_name,
-                                               'pw': pw,
-                                               'server_name': server_name,
-                                               'port': port,
-                                               'db_name': db_name,
-                                               'es_server_name': es_server_name,
-                                               'es_port': es_port,
-                                               'app_conn_name': app_conn_name,
-                                               'log_conn_name': log_conn_name,
-                                               'db_logger_name': db_logger_name,
-                                               'script_logger_name': script_logger_name,
-                                               'modus': modus
-                                                }
-                                             )
+    lazy_access_ob.provider.config.from_dict({'user_name': user_name or db_config['postgres']['user_name'],
+                                              'pw': pw or db_config['postgres']['pw'],
+                                              'server_name': server_name or db_config['postgres']['server_name'],
+                                              'port': port or db_config['postgres']['port'],
+                                              'db_name': db_name or db_config['postgres']['db_name'],
+                                              'es_server_name': es_server_name or db_config['elastic_search']['server_name'],
+                                              'es_port': es_port or db_config['elastic_search']['port'],
+                                              'app_conn_name': app_conn_name or db_config['postgres']['app_conn_name'],
+                                              'log_conn_name': log_conn_name or db_config['postgres']['log_conn_name'],
+                                              'db_logger_name': db_logger_name or db_config['postgres']['db_logger_name'],
+                                              'script_logger_name': script_logger_name or db_config['postgres']['script_logger_name'],
+                                              'modus': modus
+                                             })
     lazy_access_ob.session = lazy_access_ob.get_session()
     lazy_access_ob.conn = lazy_access_ob.engine.connect()
     return lazy_access_ob
@@ -454,18 +457,3 @@ def prod_db_deps_container(user_name: str='admin',
 if __name__ == '__main__':
     sample_obj = prod_db_deps_container()
     print(sample_obj.pg_conn_str)
-    #cont = DBDeps()
-    #cont.config.from_dict({'user_name':'admin',
-   #                       'pw': 'admin',
-    #                       'server_name': 'localhost',
-   #                        'port' : 5437,
-  #                         'db_name' : 'SO_ANA',
-   #                        'es_server_name':'localhost',
-  #                         'es_port': 9200,
-  #                         'app_conn_name': 'so_ana_app',
-  #                         'log_conn_name': 'so_ana_log',
-  #                         'db_logger_name':'default.db',
-  #                         'script_logger_name':'default.db'})
-#
-    #pg_conn_str = cont.pg_conn_str()
-    #print(pg_conn_str)

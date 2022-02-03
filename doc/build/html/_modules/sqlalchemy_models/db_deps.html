@@ -83,6 +83,8 @@
 <span class="kn">import</span> <span class="nn">marshmallow_dataclass</span> <span class="k">as</span> <span class="nn">mmdc</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_util</span>
 <span class="kn">import</span> <span class="nn">so_ana_util.common_types</span> <span class="k">as</span> <span class="nn">common_types</span>
 <span class="kn">import</span> <span class="nn">sqlalchemy_models.models</span> <span class="k">as</span> <span class="nn">sqamod</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
@@ -489,33 +491,34 @@
 
 <span class="n">db_deps</span> <span class="o">=</span> <span class="n">DBDeps</span><span class="p">()</span>
 
-<div class="viewcode-block" id="prod_db_deps_container"><a class="viewcode-back" href="../../incl/API_doc.html#sqlalchemy_models.db_deps.prod_db_deps_container">[docs]</a><span class="k">def</span> <span class="nf">prod_db_deps_container</span><span class="p">(</span><span class="n">user_name</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s1">&#39;admin&#39;</span><span class="p">,</span>
-                           <span class="n">pw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;admin&#39;</span><span class="p">,</span>
-                           <span class="n">server_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;localhost&#39;</span><span class="p">,</span>
-                           <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5437</span><span class="p">,</span>
-                           <span class="n">db_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;SO_ANA&#39;</span><span class="p">,</span>
-                           <span class="n">es_server_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;localhost&#39;</span><span class="p">,</span>
-                           <span class="n">es_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">9200</span><span class="p">,</span>
-                           <span class="n">app_conn_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;so_ana_app&#39;</span><span class="p">,</span>
-                           <span class="n">log_conn_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;so_ana_log&#39;</span><span class="p">,</span>
-                           <span class="n">db_logger_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;default.db&#39;</span><span class="p">,</span>
-                           <span class="n">script_logger_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;default.db&#39;</span><span class="p">,</span>
+
+<div class="viewcode-block" id="prod_db_deps_container"><a class="viewcode-back" href="../../incl/API_doc.html#sqlalchemy_models.db_deps.prod_db_deps_container">[docs]</a><span class="k">def</span> <span class="nf">prod_db_deps_container</span><span class="p">(</span><span class="n">user_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">pw</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">server_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">port</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">db_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">es_server_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">es_port</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">app_conn_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">log_conn_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">db_logger_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">script_logger_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                            <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;test&#39;</span><span class="p">):</span>
+    <span class="n">db_config</span> <span class="o">=</span> <span class="n">so_ana_util</span><span class="o">.</span><span class="n">get_main_config</span><span class="p">()[</span><span class="s1">&#39;db_opts&#39;</span><span class="p">]</span>
     <span class="n">lazy_access_ob</span> <span class="o">=</span> <span class="n">LazyProviderAccessObject</span><span class="p">(</span><span class="n">db_deps</span><span class="p">)</span>
-    <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span> <span class="s1">&#39;user_name&#39;</span><span class="p">:</span> <span class="n">user_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;pw&#39;</span><span class="p">:</span> <span class="n">pw</span><span class="p">,</span>
-                                               <span class="s1">&#39;server_name&#39;</span><span class="p">:</span> <span class="n">server_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span>
-                                               <span class="s1">&#39;db_name&#39;</span><span class="p">:</span> <span class="n">db_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;es_server_name&#39;</span><span class="p">:</span> <span class="n">es_server_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;es_port&#39;</span><span class="p">:</span> <span class="n">es_port</span><span class="p">,</span>
-                                               <span class="s1">&#39;app_conn_name&#39;</span><span class="p">:</span> <span class="n">app_conn_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;log_conn_name&#39;</span><span class="p">:</span> <span class="n">log_conn_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;db_logger_name&#39;</span><span class="p">:</span> <span class="n">db_logger_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;script_logger_name&#39;</span><span class="p">:</span> <span class="n">script_logger_name</span><span class="p">,</span>
-                                               <span class="s1">&#39;modus&#39;</span><span class="p">:</span> <span class="n">modus</span>
-                                                <span class="p">}</span>
-                                             <span class="p">)</span>
+    <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;user_name&#39;</span><span class="p">:</span> <span class="n">user_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;user_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;pw&#39;</span><span class="p">:</span> <span class="n">pw</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;pw&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;server_name&#39;</span><span class="p">:</span> <span class="n">server_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;server_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="n">port</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;port&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;db_name&#39;</span><span class="p">:</span> <span class="n">db_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;db_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;es_server_name&#39;</span><span class="p">:</span> <span class="n">es_server_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;elastic_search&#39;</span><span class="p">][</span><span class="s1">&#39;server_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;es_port&#39;</span><span class="p">:</span> <span class="n">es_port</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;elastic_search&#39;</span><span class="p">][</span><span class="s1">&#39;port&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;app_conn_name&#39;</span><span class="p">:</span> <span class="n">app_conn_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;app_conn_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;log_conn_name&#39;</span><span class="p">:</span> <span class="n">log_conn_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;log_conn_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;db_logger_name&#39;</span><span class="p">:</span> <span class="n">db_logger_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;db_logger_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;script_logger_name&#39;</span><span class="p">:</span> <span class="n">script_logger_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;script_logger_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;modus&#39;</span><span class="p">:</span> <span class="n">modus</span>
+                                             <span class="p">})</span>
     <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
     <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">lazy_access_ob</span></div>
@@ -523,21 +526,6 @@
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="n">sample_obj</span> <span class="o">=</span> <span class="n">prod_db_deps_container</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">sample_obj</span><span class="o">.</span><span class="n">pg_conn_str</span><span class="p">)</span>
-    <span class="c1">#cont = DBDeps()</span>
-    <span class="c1">#cont.config.from_dict({&#39;user_name&#39;:&#39;admin&#39;,</span>
-   <span class="c1">#                       &#39;pw&#39;: &#39;admin&#39;,</span>
-    <span class="c1">#                       &#39;server_name&#39;: &#39;localhost&#39;,</span>
-   <span class="c1">#                        &#39;port&#39; : 5437,</span>
-  <span class="c1">#                         &#39;db_name&#39; : &#39;SO_ANA&#39;,</span>
-   <span class="c1">#                        &#39;es_server_name&#39;:&#39;localhost&#39;,</span>
-  <span class="c1">#                         &#39;es_port&#39;: 9200,</span>
-  <span class="c1">#                         &#39;app_conn_name&#39;: &#39;so_ana_app&#39;,</span>
-  <span class="c1">#                         &#39;log_conn_name&#39;: &#39;so_ana_log&#39;,</span>
-  <span class="c1">#                         &#39;db_logger_name&#39;:&#39;default.db&#39;,</span>
-  <span class="c1">#                         &#39;script_logger_name&#39;:&#39;default.db&#39;})</span>
-<span class="c1">#</span>
-    <span class="c1">#pg_conn_str = cont.pg_conn_str()</span>
-    <span class="c1">#print(pg_conn_str)</span>
 </pre></div>
 
            </div>

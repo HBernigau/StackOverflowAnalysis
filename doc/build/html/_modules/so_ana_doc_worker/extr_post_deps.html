@@ -84,6 +84,8 @@
 <span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span> <span class="nn">circuitbreaker</span> <span class="kn">import</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">CircuitBreakerMonitor</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_util</span>
 <span class="kn">from</span> <span class="nn">so_ana_util.common_types</span> <span class="kn">import</span> <span class="n">get_tst_logger</span><span class="p">,</span> <span class="n">get_null_logger</span><span class="p">,</span> <span class="n">get_prod_logger</span><span class="p">,</span> <span class="n">TstHandler</span>
 
 
@@ -125,68 +127,10 @@
     <span class="n">err_msg</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">circuit_closed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span></div>
 
-<div class="viewcode-block" id="FileSystemContentDownloader"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader">[docs]</a><span class="k">class</span> <span class="nc">FileSystemContentDownloader</span><span class="p">(</span><span class="n">AbstractContentDownloader</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        A content downloader that reads data from the file system (for testing purposes)</span>
-
-<span class="sd">        :param path: path to the files to be loaded</span>
-<span class="sd">        :param logger: a logger used by the downloader</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">src_path</span> <span class="o">=</span> <span class="n">path</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span> <span class="ow">or</span> <span class="n">get_null_logger</span><span class="p">()</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">src_path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;the source path &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_src_dir_path</span>
-
-    <span class="nd">@src_path</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">src_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;setter for the source folder&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_src_dir_path</span> <span class="o">=</span> <span class="n">value</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;path &quot;</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&quot; is not a valid directory.&#39;</span><span class="p">)</span>
-
-<div class="viewcode-block" id="FileSystemContentDownloader.metadata_by_topic_and_page"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader.metadata_by_topic_and_page">[docs]</a>    <span class="k">def</span> <span class="nf">metadata_by_topic_and_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">page_nr</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        see: :py:meth:`so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.metadata_by_topic_and_page`</span>
-
-<span class="sd">        :param topic: topic label</span>
-<span class="sd">        :param page_nr:</span>
-<span class="sd">        :return:</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_path</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;overview_</span><span class="si">{</span><span class="n">page_nr</span><span class="si">}</span><span class="s1">.html&#39;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">cont</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-                <span class="n">code</span> <span class="o">=</span> <span class="mi">200</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;unhandled error &quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&quot; occured when trying to access topic &quot;</span><span class="si">{</span><span class="n">topic</span><span class="si">}</span><span class="s1">&quot; an page </span><span class="si">{</span><span class="n">page_nr</span><span class="si">}</span><span class="s1">&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-            <span class="n">cont</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-            <span class="n">code</span> <span class="o">=</span> <span class="mi">942</span>
-        <span class="k">return</span> <span class="n">RequResult</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="n">code</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">cont</span><span class="p">,</span> <span class="n">err_msg</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="FileSystemContentDownloader.post_by_id"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader.post_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">post_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span><span class="o">-&gt;</span><span class="nb">str</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_path</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;post_</span><span class="si">{</span><span class="n">post_id</span><span class="si">}</span><span class="s1">.html&#39;</span><span class="p">),</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">cont</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-                <span class="n">code</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;unhandled error &quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&quot; occured when trying to access post_id &quot;</span><span class="si">{</span><span class="n">post_id</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-            <span class="n">cont</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-            <span class="n">code</span> <span class="o">=</span> <span class="mi">942</span>
-
-        <span class="k">return</span> <span class="n">RequResult</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="n">code</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">cont</span><span class="p">,</span> <span class="n">err_msg</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span></div></div>
-
 
 <div class="viewcode-block" id="RobotsPolicyException"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.RobotsPolicyException">[docs]</a><span class="k">class</span> <span class="nc">RobotsPolicyException</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
     <span class="k">pass</span></div>
+
 
 <div class="viewcode-block" id="HTTPError"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.HTTPError">[docs]</a><span class="k">class</span> <span class="nc">HTTPError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
     <span class="k">pass</span></div>
@@ -230,16 +174,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">rp</span> <span class="o">=</span> <span class="n">robots</span><span class="o">.</span><span class="n">RobotFileParser</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">requ_delay</span> <span class="o">=</span> <span class="n">requ_delay</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">get_requ_data</span> <span class="o">=</span> <span class="n">circuit</span><span class="p">(</span><span class="n">failure_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">recovery_timeout</span><span class="o">=</span><span class="n">recovery_timeout</span><span class="p">)(</span><span class="n">get_requ_data</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">stack_exchange_ws</span> <span class="o">==</span> <span class="s1">&#39;stackoverflow&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="s1">&#39;https://stackoverflow.com&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">post_template</span> <span class="o">=</span> <span class="s1">&#39;https://stackoverflow.com/questions/@post_id@&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">meta_template</span> <span class="o">=</span> <span class="s1">&#39;https://stackoverflow.com/questions/tagged/@tag@&#39;</span>
-        <span class="k">elif</span> <span class="n">stack_exchange_ws</span> <span class="o">==</span> <span class="s1">&#39;softwareengineering&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="s1">&#39;https://softwareengineering.stackexchange.com&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">post_template</span> <span class="o">=</span> <span class="s1">&#39;https://softwareengineering.stackexchange.com/questions/@post_id@&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">meta_template</span> <span class="o">=</span> <span class="s1">&#39;https://softwareengineering.stackexchange.com/questions/tagged/@tag@&#39;</span>
+
+        <span class="n">main_config</span> <span class="o">=</span> <span class="n">so_ana_util</span><span class="o">.</span><span class="n">get_main_config</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">main_config</span><span class="p">[</span><span class="s1">&#39;so_urls&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">stack_exchange_ws</span><span class="o">==</span><span class="n">key</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;base_url&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">post_template</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;post_template&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meta_template</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;meta_template&#39;</span><span class="p">]</span>
+                <span class="k">break</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Stack exchange site </span><span class="si">{</span><span class="n">stack_exchange_ws</span><span class="si">}</span><span class="s1"> not implemented yet.&#39;</span><span class="p">)</span>
+            <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Stack exchange site </span><span class="si">{</span><span class="n">stack_exchange_ws</span><span class="si">}</span><span class="s1"> not implemented yet.&#39;</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_next_request_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_get_site</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
@@ -279,19 +225,6 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_site</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">post_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@post_id@&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">post_id</span><span class="p">)))</span></div></div>
 
 
-<div class="viewcode-block" id="Test_container"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container">[docs]</a><span class="k">class</span> <span class="nc">Test_container</span><span class="p">(</span><span class="n">containers</span><span class="o">.</span><span class="n">DeclarativeContainer</span><span class="p">):</span>
-
-    <span class="n">config</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Configuration</span><span class="p">()</span>
-
-    <span class="n">tst_handler</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span><span class="n">TstHandler</span><span class="p">)</span>
-
-    <span class="n">smpl_logger</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">get_tst_logger</span><span class="p">,</span>
-                                    <span class="n">tst_handler</span> <span class="o">=</span> <span class="n">tst_handler</span><span class="p">)</span>
-
-    <span class="n">page_downloader</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">FileSystemContentDownloader</span><span class="p">,</span>
-                                        <span class="n">path</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">tst_file_path</span><span class="p">,</span>
-                                        <span class="n">logger</span> <span class="o">=</span> <span class="n">smpl_logger</span><span class="p">)</span></div>
-
 <div class="viewcode-block" id="Prod_container"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container">[docs]</a><span class="k">class</span> <span class="nc">Prod_container</span><span class="p">(</span><span class="n">containers</span><span class="o">.</span><span class="n">DeclarativeContainer</span><span class="p">):</span>
 
     <span class="n">config</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Configuration</span><span class="p">()</span>
@@ -304,20 +237,6 @@
                                         <span class="n">requ_delay</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">requ_delay</span><span class="p">,</span>
                                         <span class="n">recovery_timeout</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">recovery_timeout</span>
                                         <span class="p">)</span></div>
-
-
-
-
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="n">tst_handler</span> <span class="o">=</span> <span class="n">TstHandler</span><span class="p">()</span>
-    <span class="n">smpl_logger</span> <span class="o">=</span> <span class="n">get_tst_logger</span><span class="p">(</span><span class="n">tst_handler</span><span class="p">)</span>
-    <span class="n">tst_downloader</span> <span class="o">=</span> <span class="n">WebContentDownloader</span><span class="p">(</span><span class="n">stack_exchange_ws</span> <span class="o">=</span> <span class="s1">&#39;stackoverflow&#39;</span><span class="p">,</span>
-                                          <span class="n">user_agent</span> <span class="o">=</span> <span class="s1">&#39;Software Engineering Research@University of St.Gallen&#39;</span><span class="p">,</span>
-                                          <span class="n">from_email</span> <span class="o">=</span> <span class="s1">&#39;Holger.Bernigau@gmx.de&#39;</span><span class="p">,</span>
-                                          <span class="n">logger</span> <span class="o">=</span> <span class="n">smpl_logger</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">tst_downloader</span><span class="o">.</span><span class="n">metadata_by_topic_and_page</span><span class="p">(</span><span class="s1">&#39;domain-driven-design&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">tst_downloader</span><span class="o">.</span><span class="n">post_by_id</span><span class="p">(</span><span class="mi">25042</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">tst_handler</span><span class="o">.</span><span class="n">log_list</span><span class="p">)</span>
 
 </pre></div>
 

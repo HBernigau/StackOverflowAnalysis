@@ -40,7 +40,14 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">How to run stack overflow analysis</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to run stack overflow analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#get-the-repository">Get the repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build-the-virtual-environment">Build the virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-docker-containers">Start Docker containers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#start-prefect">Start Prefect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-your-first-sample-workflow">Run your first sample workflow</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="Architecture.html">Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="API_doc.html">API documentation</a></li>
 </ul>
@@ -71,7 +78,181 @@
              
   <section id="how-to-run-stack-overflow-analysis">
 <h1>How to run stack overflow analysis<a class="headerlink" href="#how-to-run-stack-overflow-analysis" title="Permalink to this headline"></a></h1>
-<p>t.b.d.</p>
+<section id="get-the-repository">
+<h2>Get the repository<a class="headerlink" href="#get-the-repository" title="Permalink to this headline"></a></h2>
+<p>As a first step clone the repository:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span><span class="k">cd</span> <span class="p">&lt;</span>put-your-target-folder-here&gt;
+git clone https://github.com/HBernigau/StackOverflowAnalysis.git
+</pre></div>
+</div>
+</section>
+<section id="build-the-virtual-environment">
+<h2>Build the virtual environment<a class="headerlink" href="#build-the-virtual-environment" title="Permalink to this headline"></a></h2>
+<p>The application has been tested using <em>Python 3.8.6</em> on a
+Windows computer with <em>Windows 10 Enterprise</em>.</p>
+<p>If you want to use the same Python version, we recommend
+using <a class="reference external" href="https://github.com/pyenv/pyenv">pyenv</a> which allows
+management of multiple Python versions on the same machine.</p>
+<p>For dependency management the current application uses
+<a class="reference external" href="https://github.com/jazzband/pip-tools">pip-tools</a> ,
+which can be considered as a best-practice for dependency
+management in Python. In order to use it, install it using pip:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>python -m pip install pip-tools
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>when writing this guide, there was
+an issue regarding compatibility of pip and
+pip-utils, which can be fixed by using a pip version
+bellow 22.0 (see <a class="reference external" href="https://github.com/jazzband/pip-tools/issues/1558">issue 1558 on pip-tools on Github</a> ).</p>
+</div>
+<p>Now change to the applications root folder and
+build the virtual environment by calling</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>build_full.bat
+</pre></div>
+</div>
+<p>If you want to re-generate the requirements file
+from first order dependencies (i.e. using the latest
+available library version) call</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>compile_full.bat
+</pre></div>
+</div>
+<p>before calling the build script.</p>
+</section>
+<section id="start-docker-containers">
+<h2>Start Docker containers<a class="headerlink" href="#start-docker-containers" title="Permalink to this headline"></a></h2>
+<p>The application uses a <a class="reference external" href="https://www.postgresql.org/">PostgreSQL</a> data base and an
+<a class="reference external" href="https://www.elastic.co/de/elasticsearch/">elastic search</a>
+data base as backends which ar run in Docker containers.</p>
+<p>Hence, the application requires installation of
+<a class="reference external" href="https://www.docker.com/products/docker-desktop">Docker Desktop</a> .</p>
+<p>In order to run the application some environment variables
+must be set. This can best be done by copying the <em>.env</em>
+file from <em>templates</em> folder into the root folder and set the
+variable <em>PGADMIN_DEFAULT_EMAIL</em> to some email address that
+is then used as login information for
+<a class="reference external" href="https://www.pgadmin.org/">PGAdmin</a> , a management tool for
+postgresql data bases.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>you can also change other environment variables,
+like the password for postgreSQL or various ports.
+The latter might be necessary, if you should encounter
+any port conflicts for example.</p>
+</div>
+<p>If you want to change the data base connection information in the <em>.env</em> file,
+please read the following note:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you alter postgreSQL connection data, please note the following:</p>
+<p>One of the Docker containers connects to the
+postgreSQL data base and builds the latest version
+of the application’s data base using <a class="reference external" href="https://alembic.sqlalchemy.org/en/latest/">alembic</a> .
+In order to make that work, please also adjust the database
+urls in <em>./alembic/alembic.ini</em>, line 38 and in
+<em>./alembic/alembic_docker.ini</em>, line 38 (as the names suggest,
+<em>alembic_docker.ini</em> is the connection data from within Docker).</p>
+<p>Secondly the pgAdmin container requires valid connection
+data as well. Therefore, please adjust the settings in
+<em>Docker/directories/pgadmin_config_data/servers.json</em></p>
+<p>Last but not least the application itself requires valid
+connection strings as well, which can be adjusted in
+<em>./data/config/so_ana_config.yaml</em> under db_opts -&gt; postgres.</p>
+<p>If you changed elastic search connection data,
+please adjust the application’s connection data in
+<em>./data/config/so_ana_config.yaml</em> under db_opts -&gt; elastic_search.</p>
+</div>
+<p>in order to start all Docker containers type the following in
+cmd:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>launch_docker_containers.bat
+</pre></div>
+</div>
+</section>
+<section id="start-prefect">
+<h2>Start Prefect<a class="headerlink" href="#start-prefect" title="Permalink to this headline"></a></h2>
+<p>The application uses <a class="reference external" href="https://www.prefect.io/">Prefect</a>
+for workflow management, and the individual tasks are
+run in a <a class="reference external" href="https://dask.org/">dask-cluster</a> .</p>
+<p>In order to run the cluster do the following:</p>
+<ol class="arabic simple">
+<li><p>Start dask:</p></li>
+</ol>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>launch_dask.bat
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Start the prefect server:</p></li>
+</ol>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>launch_prefect_server.bat
+</pre></div>
+</div>
+<ol class="arabic" start="3">
+<li><p>Start the prefect client:</p>
+<p>launch_prefect_client.bat</p>
+</li>
+</ol>
+<p>Now you can use the command line application, <em>so_ana.py</em>,
+to interact with the server. In order to see all
+available commands, call:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>python so_ana.py --help
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When configured as described above, prefect does not persist run-time information,
+i.e. prefect server looses any information about previous runs.</p>
+<p>Even though prefect in principle allows providing a storage location for
+its postgreSQL backend, this is not very help-full under windows, as
+assigning windows drives conflicts with Linux user-permission in Windows.</p>
+<p>As a work-around you can use Docker managed drives. In order to do that,
+the file <em>./venv/Lib/site-packages/cli/docker-compose.yml</em> has to be
+modified. In order to see an example, please open the file
+<em>./templates/.docker-compose_prefect.yml</em>.
+The essential modifications are in:</p>
+<ul class="simple">
+<li><p>Line 18: mapping the docker-managed drive “prefect_postgresdata_so_analysis” to <em>/var/lib/postgresql/data</em></p></li>
+<li><p>Line 19: mapping the back-up folder to <em>/pg_backup/</em> / this is relevant
+if you want to back-up the prefect data base / otherhwise you can skip these lines</p></li>
+<li><p>Line 147-148: defining the docker-managed drive <em>prefect_postgresdata_so_analysis</em></p></li>
+</ul>
+</div>
+</section>
+<section id="run-your-first-sample-workflow">
+<h2>Run your first sample workflow<a class="headerlink" href="#run-your-first-sample-workflow" title="Permalink to this headline"></a></h2>
+<p>Generally, flow configurations are stored in <em>./data/config</em>.
+The most straight-forward way to run the sample configuration
+<em>adm_smpl.yaml</em>, is using the command line utility, <em>so_ana.py</em>:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>activate_venv.bat
+python so_ana.py run --test adm_smpl.yaml python so_ana.py run --test adm_smpl.yaml Holger.Bernigau@gmx.de <span class="s2">&quot;Software Engineering Research@University of St.Gallen&quot;</span>
+</pre></div>
+</div>
+<p>This command executes the flow with configuration <em>adm_smpl.yaml</em> in test modus.
+For all requests to stack-overflow, the user provides some credentials within
+the request headers (from_email=”<a class="reference external" href="mailto:Holger&#46;Bernigau&#37;&#52;&#48;gmx&#46;de">Holger<span>&#46;</span>Bernigau<span>&#64;</span>gmx<span>&#46;</span>de</a>” / user_agent=”Software Engineering <a class="reference external" href="mailto:Research&#37;&#52;&#48;University">Research<span>&#64;</span>University</a> of St.Gallen”).
+This is in line with <a class="reference external" href="https://towardsdatascience.com/ethics-in-web-scraping-b96b18136f01">ethical best-practices for web-scrapping</a> .</p>
+<p>A more convenient way to execute the flow, is submitting it to prefect server.
+This can be done by calling the following command:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>python so_ana.py register
+</pre></div>
+</div>
+<p>before running the script, you should clear all previous data
+(as the step names to be provided in the sample configuration are supposed to be unique).</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>python so_ana.py clear-db-data --test
+</pre></div>
+</div>
+<p>Then enter “localhost:8080” in your favorite Browser to open prefect server’s UI.
+Change into Flows and select “so-analysis”</p>
+<img alt="../_images/cover_prefect_UI.png" src="../_images/cover_prefect_UI.png" />
+<p>Select the “Run” button and enter the flow parameters:</p>
+<img alt="../_images/run_prefect_UI_001.png" src="../_images/run_prefect_UI_001.png" />
+<p>In order to enable a test-run, open the <em>advanced run configurations</em></p>
+<img alt="../_images/run_prefect_UI_002.png" src="../_images/run_prefect_UI_002.png" />
+<p>and enter modus test:</p>
+<img alt="../_images/run_prefect_UI_003.png" src="../_images/run_prefect_UI_003.png" />
+<p>After clicking the <em>run button</em>, a dashboard appears
+showing the run-time information of the flow.</p>
+</section>
 </section>
 
 

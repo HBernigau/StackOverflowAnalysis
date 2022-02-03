@@ -175,11 +175,12 @@ def visualize():
 
 @exc_comm.command()
 @click.argument('config_yaml')
-@click.option('--test/--prod', default=True, help='--test implies that the flow is executed in test modus / '
-                                                  '--prod implies that it is executed in prod modus')
 @click.argument('user_agent')
 @click.argument('from_email')
-def run(config_yaml, test, user_agent, from_email):
+@click.option('--test/--prod', default=True, help='--test implies that the flow is executed in test modus / '
+                                                  '--prod implies that it is executed in prod modus')
+
+def run(config_yaml, user_agent, from_email, test):
     """
     excecutes the main flow in a dask cluster using the configuration config_yaml in configuration folder.
     """
@@ -192,8 +193,10 @@ def run(config_yaml, test, user_agent, from_email):
 
     start_tmest = datetime.now()
     print(' -> Start', start_tmest)
-    with prefect.context(modus = modus, user_agent=user_agent, from_email=from_email):
-        status = flow.run(parameters=dict(config_yaml=config_yaml))
+    with prefect.context(modus = modus):
+        status = flow.run(parameters=dict(config_yaml=config_yaml,
+                                          user_agent=user_agent,
+                                          from_email=from_email))
     end_tmest = datetime.now()
 
     res_dict = {'success': [], 'mapped_succ': [], 'other': []}
@@ -259,7 +262,7 @@ def run(config_yaml, test, user_agent, from_email):
 
 @exc_comm.command()
 @click.option('--test/--prod', default=True, help='--test implies that all test data is deleted from pg and es / '
-                                                  '--prod imlies that all prod data is deleted.')
+                                                  '--prod implies that all prod data is deleted.')
 def clear_db_data(test):
     """
     Clears data in all data base data

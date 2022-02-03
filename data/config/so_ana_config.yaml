@@ -1,0 +1,29 @@
+so_urls:
+    stackoverflow:
+        base_url: https://stackoverflow.com
+        post_template: https://stackoverflow.com/questions/@post_id@
+        meta_template: https://stackoverflow.com/questions/tagged/@tag@       
+    softwareengineering:
+        base_url: https://softwareengineering.stackexchange.com
+        post_template: https://softwareengineering.stackexchange.com/questions/@post_id@
+        meta_template: https://softwareengineering.stackexchange.com/questions/tagged/@tag@   
+        
+dask_opts:
+    dask_port: 64828
+    dask_server: 127.0.0.1
+    
+db_opts:
+    elastic_search:
+        server_name: localhost
+        port: 9200   
+    postgres:
+        user_name: admin
+        pw: admin
+        server_name: localhost
+        port: 5437
+        db_name: SO_ANA
+        app_conn_name: so_ana_app
+        log_conn_name: so_ana_log
+        db_logger_name: default.db
+        script_logger_name: default.db
+        

@@ -244,11 +244,12 @@
 
 <span class="nd">@exc_comm</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s1">&#39;config_yaml&#39;</span><span class="p">)</span>
-<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--test/--prod&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;--test implies that the flow is executed in test modus / &#39;</span>
-                                                  <span class="s1">&#39;--prod implies that it is executed in prod modus&#39;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s1">&#39;user_agent&#39;</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s1">&#39;from_email&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">config_yaml</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">user_agent</span><span class="p">,</span> <span class="n">from_email</span><span class="p">):</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--test/--prod&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;--test implies that the flow is executed in test modus / &#39;</span>
+                                                  <span class="s1">&#39;--prod implies that it is executed in prod modus&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">config_yaml</span><span class="p">,</span> <span class="n">user_agent</span><span class="p">,</span> <span class="n">from_email</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    excecutes the main flow in a dask cluster using the configuration config_yaml in configuration folder.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -261,8 +262,10 @@
 
     <span class="n">start_tmest</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; -&gt; Start&#39;</span><span class="p">,</span> <span class="n">start_tmest</span><span class="p">)</span>
-    <span class="k">with</span> <span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="p">(</span><span class="n">modus</span> <span class="o">=</span> <span class="n">modus</span><span class="p">,</span> <span class="n">user_agent</span><span class="o">=</span><span class="n">user_agent</span><span class="p">,</span> <span class="n">from_email</span><span class="o">=</span><span class="n">from_email</span><span class="p">):</span>
-        <span class="n">status</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">config_yaml</span><span class="o">=</span><span class="n">config_yaml</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="p">(</span><span class="n">modus</span> <span class="o">=</span> <span class="n">modus</span><span class="p">):</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">parameters</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">config_yaml</span><span class="o">=</span><span class="n">config_yaml</span><span class="p">,</span>
+                                          <span class="n">user_agent</span><span class="o">=</span><span class="n">user_agent</span><span class="p">,</span>
+                                          <span class="n">from_email</span><span class="o">=</span><span class="n">from_email</span><span class="p">))</span>
     <span class="n">end_tmest</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
 
     <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;success&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;mapped_succ&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;other&#39;</span><span class="p">:</span> <span class="p">[]}</span>
@@ -328,7 +331,7 @@
 
 <span class="nd">@exc_comm</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s1">&#39;--test/--prod&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;--test implies that all test data is deleted from pg and es / &#39;</span>
-                                                  <span class="s1">&#39;--prod imlies that all prod data is deleted.&#39;</span><span class="p">)</span>
+                                                  <span class="s1">&#39;--prod implies that all prod data is deleted.&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">clear_db_data</span><span class="p">(</span><span class="n">test</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Clears data in all data base data</span>

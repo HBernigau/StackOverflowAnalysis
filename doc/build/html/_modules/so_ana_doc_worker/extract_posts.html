@@ -321,68 +321,6 @@
     <span class="n">res_dict</span><span class="p">[</span><span class="s1">&#39;total&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_lst</span><span class="p">)</span>
     <span class="n">res_dict</span><span class="p">[</span><span class="s1">&#39;successfull&#39;</span><span class="p">]</span> <span class="o">=</span><span class="nb">len</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res_lst</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sub_field_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">exit_code</span><span class="o">==</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">res_dict</span></div>
-
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="c1">#logging.basicConfig(level=logging.INFO)</span>
-    <span class="c1">#config_yml_file = os.path.abspath(os.path.join(os.path.dirname(__file__), &#39;config.yml&#39;))</span>
-
-    <span class="n">step</span> <span class="o">=</span> <span class="s1">&#39;#1&#39;</span>
-    <span class="n">step_label</span> <span class="o">=</span> <span class="s1">&#39;test_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-
-    <span class="n">deps</span> <span class="o">=</span>  <span class="n">prod_db_deps_container</span><span class="p">()</span>
-    <span class="n">get_session</span> <span class="o">=</span> <span class="n">deps</span><span class="o">.</span><span class="n">get_session</span>
-
-    <span class="n">prod_container</span> <span class="o">=</span> <span class="n">extr_post_deps</span><span class="o">.</span><span class="n">Prod_container</span><span class="p">()</span>
-    <span class="n">prod_container</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;logger&#39;</span><span class="p">:</span> <span class="n">deps</span><span class="o">.</span><span class="n">script_logger</span><span class="p">,</span>
-                                     <span class="s1">&#39;stack_exchange_ws&#39;</span><span class="p">:</span> <span class="s1">&#39;stackoverflow&#39;</span><span class="p">,</span>
-                                     <span class="s1">&#39;user_agent&#39;</span><span class="p">:</span> <span class="s1">&#39;Software Engineering Research@University of St.Gallen&#39;</span><span class="p">,</span>
-                                     <span class="s1">&#39;from_email&#39;</span><span class="p">:</span> <span class="s1">&#39;Holger.Bernigau@gmx.de&#39;</span><span class="p">,</span>
-                                     <span class="s1">&#39;requ_delay&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
-                                     <span class="s1">&#39;recovery_timeout&#39;</span><span class="p">:</span> <span class="mi">500</span>
-                                     <span class="p">})</span>
-    <span class="n">downloader</span><span class="o">=</span><span class="n">prod_container</span><span class="o">.</span><span class="n">page_downloader</span><span class="p">()</span>
-    <span class="n">logger</span><span class="o">=</span><span class="n">prod_container</span><span class="o">.</span><span class="n">prod_logger</span><span class="p">()</span>
-
-    <span class="c1"># tst_outp_handler = tst_container.tst_handler()</span>
-    <span class="c1"># tst_outp_handler.reset_loglist()</span>
-    <span class="n">topic</span><span class="o">=</span><span class="s1">&#39;anemic-domain-model&#39;</span>
-    <span class="n">nr_pages</span> <span class="o">=</span> <span class="n">extract_nr_pages</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span> <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span> <span class="n">topic</span><span class="o">=</span><span class="n">topic</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Number of pages: </span><span class="si">{</span><span class="n">nr_pages</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-
-    <span class="n">ord_key_generator</span><span class="o">=</span><span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pages</span><span class="p">):</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Extracting page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">dwnl_page_res</span><span class="o">=</span><span class="n">download_page</span><span class="p">(</span>
-                                <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span>
-                                <span class="n">topic</span><span class="o">=</span><span class="n">topic</span><span class="p">,</span>
-                                <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-                                <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
-                                <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
-                                <span class="n">ord_key</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
-                                <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of download for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">dwnl_page_res</span><span class="o">.</span><span class="n">dwnl_page_result</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">extr_pages_info</span><span class="o">=</span><span class="n">extract_meta</span><span class="p">(</span>   <span class="n">dwnl_page_res</span><span class="o">.</span><span class="n">raw_page_content</span><span class="p">,</span>
-                                        <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-                                        <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
-                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
-                                        <span class="n">ord_key_generator</span><span class="o">=</span><span class="n">ord_key_generator</span><span class="p">,</span>
-                                        <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span>
-                     <span class="p">)</span>
-        <span class="n">extr_sum</span> <span class="o">=</span> <span class="n">WorkerSummaryReport</span><span class="o">.</span><span class="n">from_result_list</span><span class="p">(</span><span class="n">extr_pages_info</span><span class="p">,</span> <span class="n">attr_name</span><span class="o">=</span><span class="s1">&#39;extract_result&#39;</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of extraction of post meta information for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">extr_sum</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
-        <span class="n">dwnl_res_lst</span> <span class="o">=</span> <span class="p">[</span><span class="n">download_post</span><span class="p">(</span>  <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span>
-                                        <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
-                                        <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
-                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
-                                        <span class="n">post_id</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">post_id</span><span class="p">,</span>
-                                        <span class="n">ord_key</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">ord_key</span><span class="p">,</span>
-                                        <span class="n">ml_tag</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">ml_tag</span><span class="p">,</span>
-                                        <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
-                        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">extr_pages_info</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">==</span> <span class="mi">0</span>
-                        <span class="p">]</span>
-        <span class="n">dwnl_sum</span> <span class="o">=</span>  <span class="n">WorkerSummaryReport</span><span class="o">.</span><span class="n">from_result_list</span><span class="p">(</span><span class="n">dwnl_res_lst</span><span class="p">,</span> <span class="n">attr_name</span><span class="o">=</span><span class="s1">&#39;dwnl_post_result&#39;</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of downloads of posts for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">dwnl_sum</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
 </pre></div>
 
            </div>

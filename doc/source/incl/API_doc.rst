@@ -123,13 +123,19 @@ sub-module so_ana_util.data_access
    :members:
    :undoc-members:
 
+sub-module so_ana_util.error_handling
+*************************************
+
+.. automodule:: so_ana_util.error_handling
+   :members:
+   :undoc-members:
+
 sub-module so_ana_util.so_ana_json
 **********************************
 
 .. automodule:: so_ana_util.so_ana_json
    :members:
    :undoc-members:
-
 
 module sqlalchemy_models
 ------------------------

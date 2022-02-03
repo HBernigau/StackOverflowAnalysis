@@ -39,6 +39,7 @@
 <li class="toctree-l1"><a class="reference internal" href="incl/intro.html">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="incl/how_to_run.html">How to run stack overflow analysis</a></li>
 <li class="toctree-l1"><a class="reference internal" href="incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="incl/user_guide.html">User guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="incl/API_doc.html">API documentation</a></li>
 </ul>
 
@@ -149,6 +150,8 @@
       </ul></li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.ArtefactShort">ArtefactShort (class in so_ana_management.management_utils)</a>
 </li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.SoAnaException.as_exc_info">as_exc_info (so_ana_util.error_handling.SoAnaException property)</a>
+</li>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.PostMetaData.asked_date">asked_date (so_ana_doc_worker.schemas.PostMetaData attribute)</a>
 </li>
   </ul></td>
@@ -220,8 +223,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.cls_providers">cls_providers (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.cls_providers">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_management.management_deps.Prod_container.cls_providers">(so_ana_management.management_deps.Prod_container attribute)</a>
 </li>
         <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.DBDeps.cls_providers">(sqlalchemy_models.db_deps.DBDeps attribute)</a>
@@ -272,8 +273,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.config">config (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.config">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_management.management_deps.Prod_container.config">(so_ana_management.management_deps.Prod_container attribute)</a>
 </li>
         <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.DBDeps.config">(sqlalchemy_models.db_deps.DBDeps attribute)</a>
@@ -282,8 +281,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.containers">containers (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.containers">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_management.management_deps.Prod_container.containers">(so_ana_management.management_deps.Prod_container attribute)</a>
 </li>
         <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.DBDeps.containers">(sqlalchemy_models.db_deps.DBDeps attribute)</a>
@@ -441,7 +438,17 @@
 </li>
       <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.es_url_from_parts">es_url_from_parts() (in module sqlalchemy_models.db_deps)</a>
 </li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo.exc_args">exc_args (so_ana_util.error_handling.ExceptionInfo attribute)</a>
+</li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo.exc_details">exc_details (so_ana_util.error_handling.ExceptionInfo attribute)</a>
+</li>
       <li><a href="incl/API_doc.html#so_ana_util.common_types.LogEntry.exc_text">exc_text (so_ana_util.common_types.LogEntry attribute)</a>
+</li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.SoAnaException.exc_trace">exc_trace (so_ana_util.error_handling.SoAnaException property)</a>
+</li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo.exc_type">exc_type (so_ana_util.error_handling.ExceptionInfo attribute)</a>
+</li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo">ExceptionInfo (class in so_ana_util.error_handling)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.PostMetaData.excerpt">excerpt (so_ana_doc_worker.schemas.PostMetaData attribute)</a>
 </li>
@@ -526,8 +533,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.BoWData.file_key">file_key (so_ana_doc_worker.schemas.BoWData attribute)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.BatchResultDoc.file_keys">file_keys (so_ana_management.management_utils.BatchResultDoc attribute)</a>
-</li>
-      <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader">FileSystemContentDownloader (class in so_ana_doc_worker.extr_post_deps)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_util.common_types.fill_dc_from_obj">fill_dc_from_obj() (in module so_ana_util.common_types)</a>
 </li>
@@ -625,6 +630,8 @@
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.JobOverview.from_email">from_email (so_ana_management.management_utils.JobOverview attribute)</a>
 </li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo.from_exception">from_exception() (so_ana_util.error_handling.ExceptionInfo class method)</a>
+</li>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.WorkerSummaryReport.from_result_list">from_result_list() (so_ana_doc_worker.schemas.WorkerSummaryReport class method)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.BatchResultDoc.full_path_to_files">full_path_to_files (so_ana_management.management_utils.BatchResultDoc property)</a>
@@ -703,6 +710,8 @@
       </ul></li>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extract_posts.get_summary">get_summary() (in module so_ana_doc_worker.extract_posts)</a>
 </li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.get_traceback">get_traceback() (in module so_ana_util.error_handling)</a>
+</li>
       <li><a href="incl/API_doc.html#so_ana_util.common_types.get_tst_logger">get_tst_logger() (in module so_ana_util.common_types)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_util.data_access.get_txt">get_txt() (in module so_ana_util.data_access)</a>
@@ -732,8 +741,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.inherited_providers">inherited_providers (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.inherited_providers">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_management.management_deps.Prod_container.inherited_providers">(so_ana_management.management_deps.Prod_container attribute)</a>
 </li>
         <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.DBDeps.inherited_providers">(sqlalchemy_models.db_deps.DBDeps attribute)</a>
@@ -866,8 +873,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.metadata_by_topic_and_page">metadata_by_topic_and_page() (so_ana_doc_worker.extr_post_deps.AbstractContentDownloader method)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader.metadata_by_topic_and_page">(so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader method)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.WebContentDownloader.metadata_by_topic_and_page">(so_ana_doc_worker.extr_post_deps.WebContentDownloader method)</a>
 </li>
       </ul></li>
@@ -932,6 +937,8 @@
         <li><a href="incl/API_doc.html#module-so_ana_util.common_types">so_ana_util.common_types</a>
 </li>
         <li><a href="incl/API_doc.html#module-so_ana_util.data_access">so_ana_util.data_access</a>
+</li>
+        <li><a href="incl/API_doc.html#module-so_ana_util.error_handling">so_ana_util.error_handling</a>
 </li>
         <li><a href="incl/API_doc.html#module-so_ana_util.so_ana_json">so_ana_util.so_ana_json</a>
 </li>
@@ -1087,11 +1094,7 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.page_downloader">page_downloader (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
-
-      <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.page_downloader">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
 </li>
-      </ul></li>
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.DownloadPageResult.page_nr">page_nr (so_ana_doc_worker.schemas.DownloadPageResult attribute)</a>
 
       <ul>
@@ -1129,8 +1132,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.post_by_id">post_by_id() (so_ana_doc_worker.extr_post_deps.AbstractContentDownloader method)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader.post_by_id">(so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader method)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.WebContentDownloader.post_by_id">(so_ana_doc_worker.extr_post_deps.WebContentDownloader method)</a>
 </li>
       </ul></li>
@@ -1213,8 +1214,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Prod_container.providers">providers (so_ana_doc_worker.extr_post_deps.Prod_container attribute)</a>
 
       <ul>
-        <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.providers">(so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
         <li><a href="incl/API_doc.html#so_ana_management.management_deps.Prod_container.providers">(so_ana_management.management_deps.Prod_container attribute)</a>
 </li>
         <li><a href="incl/API_doc.html#sqlalchemy_models.db_deps.DBDeps.providers">(sqlalchemy_models.db_deps.DBDeps attribute)</a>
@@ -1354,8 +1353,6 @@
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.SkipPostDownloadsSuccessReport">SkipPostDownloadsSuccessReport (class in so_ana_management.management_utils)</a>
 </li>
-      <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.smpl_logger">smpl_logger (so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
-</li>
       <li>
     so_ana
 
@@ -1448,12 +1445,21 @@
 </li>
       </ul></li>
       <li>
+    so_ana_util.error_handling
+
+      <ul>
+        <li><a href="incl/API_doc.html#module-so_ana_util.error_handling">module</a>
+</li>
+      </ul></li>
+      <li>
     so_ana_util.so_ana_json
 
       <ul>
         <li><a href="incl/API_doc.html#module-so_ana_util.so_ana_json">module</a>
 </li>
       </ul></li>
+      <li><a href="incl/API_doc.html#so_ana_util.error_handling.SoAnaException">SoAnaException</a>
+</li>
       <li>
     sqlalchemy_models.db_deps
 
@@ -1461,6 +1467,8 @@
         <li><a href="incl/API_doc.html#module-sqlalchemy_models.db_deps">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     sqlalchemy_models.model_base
 
@@ -1468,8 +1476,6 @@
         <li><a href="incl/API_doc.html#module-sqlalchemy_models.model_base">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     sqlalchemy_models.models
 
@@ -1484,8 +1490,6 @@
         <li><a href="incl/API_doc.html#module-sqlalchemy_models.table_defs">module</a>
 </li>
       </ul></li>
-      <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader.src_path">src_path (so_ana_doc_worker.extr_post_deps.FileSystemContentDownloader property)</a>
-</li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.FlowOptions.stack_exchange_type">stack_exchange_type (so_ana_management.management_utils.FlowOptions attribute)</a>
 
       <ul>
@@ -1660,8 +1664,6 @@
 </li>
       <li><a href="incl/API_doc.html#so_ana.tear_down_sessions">tear_down_sessions() (in module so_ana)</a>
 </li>
-      <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container">Test_container (class in so_ana_doc_worker.extr_post_deps)</a>
-</li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.MLOptions.test_fraction">test_fraction (so_ana_management.management_utils.MLOptions attribute)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.Artefact.thread">thread (so_ana_management.management_utils.Artefact attribute)</a>
@@ -1739,8 +1741,6 @@
       <li><a href="incl/API_doc.html#so_ana_doc_worker.schemas.QuestionInfo.total_comment_count">total_comment_count (so_ana_doc_worker.schemas.QuestionInfo attribute)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_management.management_utils.TransformStepSummaryReport">TransformStepSummaryReport (class in so_ana_management.management_utils)</a>
-</li>
-      <li><a href="incl/API_doc.html#so_ana_doc_worker.extr_post_deps.Test_container.tst_handler">tst_handler (so_ana_doc_worker.extr_post_deps.Test_container attribute)</a>
 </li>
       <li><a href="incl/API_doc.html#so_ana_util.common_types.TstHandler">TstHandler (class in so_ana_util.common_types)</a>
 </li>

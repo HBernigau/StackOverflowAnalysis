@@ -136,6 +136,7 @@ stubs/
 # exclude most content of data folder
 data/config/*
 !data/config/adm_smpl.yaml
+!data/config/so_ana_config.yaml
 !data/config/.do_not_ignore_folder
 data/output/*
 !data/output/.do_not_ignore_folder
