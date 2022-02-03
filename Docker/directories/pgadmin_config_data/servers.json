@@ -1,0 +1,13 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "Stack-overflow analysis data base",
+            "Group": "Default Server Group",
+            "Port": 5432,
+            "Username": "admin",
+            "Host": "so_ana_postgres",
+            "SSLMode": "disable",
+            "MaintenanceDB": "SO_ANA"
+        }
+    }
+}

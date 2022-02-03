@@ -1,0 +1,1 @@
+pip-sync requirements\full.txt

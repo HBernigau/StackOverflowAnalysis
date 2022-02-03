@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>so_ana_util.so_ana_json &mdash; SO_analysis 1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> SO_analysis
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/how_to_run.html">How to run stack overflow analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/API_doc.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SO_analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>so_ana_util.so_ana_json</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for so_ana_util.so_ana_json</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">contains a typed json decoder and encoder</span>
+
+<span class="sd">Author: `HBernigau &lt;https://github.com/HBernigau&gt;`_</span>
+<span class="sd">Date: 01.2022</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">is_dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">import</span> <span class="nn">marshmallow_dataclass</span> <span class="k">as</span> <span class="nn">mmdc</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">marshmallow</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_util.common_types</span> <span class="k">as</span> <span class="nn">common_types</span>
+
+
+<span class="k">def</span> <span class="nf">_is_sub_class</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">class</span> <span class="nc">_PickleLambdaFix</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+
+
+<div class="viewcode-block" id="get_col_type"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.get_col_type">[docs]</a><span class="k">def</span> <span class="nf">get_col_type</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">cond</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">cond</span> <span class="o">=</span> <span class="n">cond</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">==</span><span class="n">type_name</span> <span class="ow">and</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cond</span><span class="p">:</span>
+                <span class="n">type_name</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">break</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;List[</span><span class="si">{</span><span class="n">type_name</span><span class="si">}</span><span class="s1">]&#39;</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">cond</span> <span class="o">=</span> <span class="n">cond</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">==</span><span class="n">type_name</span> <span class="ow">and</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cond</span><span class="p">:</span>
+                <span class="n">type_name</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">break</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Dict[str,</span><span class="si">{</span><span class="n">type_name</span><span class="si">}</span><span class="s1">]&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">type_name</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">type_name</span></div>
+
+
+<div class="viewcode-block" id="dc_encoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.dc_encoder">[docs]</a><span class="k">def</span> <span class="nf">dc_encoder</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="nd">@dataclass</span>
+    <span class="k">class</span> <span class="nc">Helper</span><span class="p">:</span>
+        <span class="n">_type</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="n">_value</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+
+    <span class="n">class_schema</span> <span class="o">=</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">Helper</span><span class="p">)()</span>
+    <span class="k">return</span> <span class="n">class_schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Helper</span><span class="p">(</span><span class="n">_type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">_value</span><span class="o">=</span><span class="n">obj</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="DC_Decoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.DC_Decoder">[docs]</a><span class="k">class</span> <span class="nc">DC_Decoder</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DC</span> <span class="o">=</span> <span class="n">DC</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_dict</span><span class="p">):</span>
+        <span class="n">class_schema</span> <span class="o">=</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DC</span><span class="p">)()</span>
+        <span class="k">return</span> <span class="n">class_schema</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json_dict</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="WrapperEncoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.WrapperEncoder">[docs]</a><span class="k">class</span> <span class="nc">WrapperEncoder</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrapped_type</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_type</span> <span class="o">=</span> <span class="n">wrapped_type</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="n">wrapped_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_type</span>
+        <span class="nd">@dataclass</span>
+        <span class="k">class</span> <span class="nc">Helper</span><span class="p">:</span>
+            <span class="n">_type</span><span class="p">:</span> <span class="nb">str</span>
+            <span class="n">_value</span><span class="p">:</span> <span class="n">wrapped_type</span>
+
+        <span class="n">class_schema</span> <span class="o">=</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">Helper</span><span class="p">)()</span>
+        <span class="k">return</span> <span class="n">class_schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Helper</span><span class="p">(</span><span class="n">_type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">_value</span><span class="o">=</span><span class="n">obj</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="WrapperDecoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.WrapperDecoder">[docs]</a><span class="k">class</span> <span class="nc">WrapperDecoder</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrapped_type</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_type</span> <span class="o">=</span> <span class="n">wrapped_type</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_dict</span><span class="p">):</span>
+        <span class="n">wrapped_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_type</span>
+        <span class="nd">@dataclass</span>
+        <span class="k">class</span> <span class="nc">Helper</span><span class="p">:</span>
+            <span class="n">_value</span><span class="p">:</span> <span class="n">wrapped_type</span>
+
+        <span class="n">class_schema</span> <span class="o">=</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">Helper</span><span class="p">)()</span>
+        <span class="k">return</span> <span class="n">class_schema</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;_value&#39;</span><span class="p">:</span> <span class="n">json_dict</span><span class="p">}))</span><span class="o">.</span><span class="n">_value</span></div>
+
+
+<div class="viewcode-block" id="MMEncoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.MMEncoder">[docs]</a><span class="k">class</span> <span class="nc">MMEncoder</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">MMSchema</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MMSchema</span> <span class="o">=</span> <span class="n">MMSchema</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MMSchema</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">class</span> <span class="nc">Helper</span><span class="p">(</span><span class="n">marshmallow</span><span class="o">.</span><span class="n">Schema</span><span class="p">):</span>
+            <span class="n">_type</span> <span class="o">=</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">_PickleLambdaFix</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">missing</span><span class="o">=</span><span class="n">_PickleLambdaFix</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+            <span class="n">_value</span> <span class="o">=</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Nested</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MMSchema</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">Helper</span><span class="p">()</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;_type&#39;</span><span class="p">:</span> <span class="n">key</span><span class="p">,</span> <span class="s1">&#39;_value&#39;</span><span class="p">:</span> <span class="n">obj</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="MMDecoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.MMDecoder">[docs]</a><span class="k">class</span> <span class="nc">MMDecoder</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">MMSchema</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MMSchema</span> <span class="o">=</span> <span class="n">MMSchema</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">MMSchema</span><span class="p">()</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json_dict</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="JSONRegistry"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.JSONRegistry">[docs]</a><span class="k">class</span> <span class="nc">JSONRegistry</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="n">_PickleLambdaFix</span><span class="p">(</span><span class="kc">None</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_encoders</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="n">_PickleLambdaFix</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_decoders</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="n">_PickleLambdaFix</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">))</span>
+        <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">checker_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;dc&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                <span class="s1">&#39;mm&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">Schema</span><span class="p">),</span>
+                <span class="s1">&#39;int&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                <span class="s1">&#39;float&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                <span class="s1">&#39;str&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                <span class="s1">&#39;datetime&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">datetime</span><span class="p">),</span>
+                <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">date</span><span class="p">),</span>
+                <span class="s1">&#39;UUID&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">)</span>
+                <span class="p">}</span>
+
+<div class="viewcode-block" id="JSONRegistry.register_schema"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.JSONRegistry.register_schema">[docs]</a>    <span class="k">def</span> <span class="nf">register_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>  <span class="c1">#dc: dataclass or mm-schema</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">for</span> <span class="n">type_key</span><span class="p">,</span> <span class="n">type_checker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checker_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">type_checker</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+                <span class="k">if</span> <span class="n">type_key</span> <span class="o">==</span> <span class="s1">&#39;dc&#39;</span><span class="p">:</span>
+                    <span class="n">encoder</span> <span class="o">=</span> <span class="n">dc_encoder</span>
+                    <span class="n">decoder</span> <span class="o">=</span> <span class="n">DC_Decoder</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">type_key</span> <span class="o">==</span> <span class="s1">&#39;mm&#39;</span><span class="p">:</span>
+                    <span class="n">encoder</span> <span class="o">=</span><span class="n">MMEncoder</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+                    <span class="n">decoder</span> <span class="o">=</span> <span class="n">MMDecoder</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">encoder</span> <span class="o">=</span> <span class="n">WrapperEncoder</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+                    <span class="n">decoder</span> <span class="o">=</span> <span class="n">WrapperDecoder</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_decoders</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">decoder</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_encoders</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">encoder</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;cannot register &quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&quot;: </span><span class="si">{</span><span class="bp">cls</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="get_typed_json_encoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.get_typed_json_encoder">[docs]</a><span class="k">def</span> <span class="nf">get_typed_json_encoder</span><span class="p">(</span><span class="n">registry_</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">TypedJsonEncoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONEncoder</span><span class="p">):</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">registry_</span>
+
+        <span class="k">def</span> <span class="nf">default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">TypedJsonEncoder</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">_encoders</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">return</span> <span class="n">TypedJsonEncoder</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">_encoders</span><span class="p">[</span><span class="n">key</span><span class="p">](</span><span class="n">obj</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">default</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">TypedJsonEncoder</span></div>
+
+
+<div class="viewcode-block" id="TypedJsonDecoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonDecoder">[docs]</a><span class="k">class</span> <span class="nc">TypedJsonDecoder</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecoder</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">registry</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">object_hook</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj_hook</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_obj_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;_type&#39;</span> <span class="ow">in</span> <span class="n">val</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="s1">&#39;_value&#39;</span> <span class="ow">in</span> <span class="n">val</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">_decoders</span><span class="p">[</span><span class="n">val</span><span class="p">[</span><span class="s1">&#39;_type&#39;</span><span class="p">]](</span><span class="n">val</span><span class="p">[</span><span class="s1">&#39;_value&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">val</span></div>
+
+
+<div class="viewcode-block" id="TypedJsonSerializer"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer">[docs]</a><span class="k">class</span> <span class="nc">TypedJsonSerializer</span><span class="p">(</span><span class="n">JSONRegistry</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TypedJsonSerializer.serialize"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer.serialize">[docs]</a>    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">type_hint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_bytes</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">type_hint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">value_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_encoders</span><span class="p">[</span><span class="n">type_hint</span><span class="p">](</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Encoder</span> <span class="o">=</span> <span class="n">get_typed_json_encoder</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">value_str</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">cls</span><span class="o">=</span><span class="n">Encoder</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">as_bytes</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value_str</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value_str</span></div>
+
+<div class="viewcode-block" id="TypedJsonSerializer.deserialize"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer.deserialize">[docs]</a>    <span class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_serialized</span><span class="p">,</span> <span class="n">as_bytes</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="n">decoder</span> <span class="o">=</span> <span class="n">TypedJsonDecoder</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">as_bytes</span><span class="p">:</span>
+            <span class="n">value_serialized</span> <span class="o">=</span> <span class="n">value_serialized</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">value_serialized</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="TypedJsonSerializer_OLD"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer_OLD">[docs]</a><span class="k">class</span> <span class="nc">TypedJsonSerializer_OLD</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checker_dict</span> <span class="o">=</span> <span class="p">{</span>   <span class="s1">&#39;dc&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                                <span class="s1">&#39;mm&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">Schema</span><span class="p">),</span>
+                                <span class="s1">&#39;int&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                                <span class="s1">&#39;float&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                                <span class="s1">&#39;str&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                                <span class="s1">&#39;datetime&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">datetime</span><span class="p">),</span>
+                                <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">date</span><span class="p">),</span>
+                                <span class="s1">&#39;UUID&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">_is_sub_class</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">)</span>
+                <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="bp">cls</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TypedJsonSerializer_OLD.register_schema"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer_OLD.register_schema">[docs]</a>    <span class="k">def</span> <span class="nf">register_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>  <span class="c1">#dc: dataclass or mm-schema</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">for</span> <span class="n">type_key</span><span class="p">,</span> <span class="n">type_checker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">checker_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">type_checker</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;cannot register &quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&quot;: </span><span class="si">{</span><span class="bp">cls</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">reg_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">reg_obj_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_map</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">reg_obj_type</span> <span class="o">==</span> <span class="s1">&#39;dc&#39;</span> <span class="p">:</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">ExtSchema</span><span class="p">:</span>
+                <span class="n">_value</span><span class="p">:</span> <span class="n">reg_obj</span>
+                <span class="n">_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">ExtSchema</span><span class="p">)()</span>
+        <span class="k">elif</span> <span class="n">reg_obj_type</span> <span class="o">==</span> <span class="s1">&#39;List[dc]&#39;</span><span class="p">:</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">ExtSchema</span><span class="p">:</span>
+                <span class="n">_value</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">reg_obj</span><span class="p">]</span>
+                <span class="n">_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">ExtSchema</span><span class="p">)()</span>
+        <span class="k">elif</span> <span class="n">reg_obj_type</span> <span class="o">==</span>  <span class="s1">&#39;Dict[str,dc]&#39;</span><span class="p">:</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">Entry</span><span class="p">:</span>
+                <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+                <span class="n">value</span><span class="p">:</span> <span class="n">reg_obj</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">ExtSchema</span><span class="p">:</span>
+                <span class="n">_value</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Entry</span><span class="p">]</span>
+                <span class="n">_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="n">ExtSchema</span><span class="p">)()</span>
+        <span class="k">elif</span> <span class="n">reg_obj_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;mm&#39;</span><span class="p">,</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;datetime&#39;</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;UUID&#39;</span><span class="p">]:</span>
+            <span class="n">map_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;mm&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="s1">&#39;int&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Int</span><span class="p">(),</span>
+                        <span class="s1">&#39;str&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(),</span>
+                        <span class="s1">&#39;float&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Float</span><span class="p">(),</span>
+                        <span class="s1">&#39;datetime&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">DateTime</span><span class="p">(),</span>
+                        <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Date</span><span class="p">(),</span>
+                        <span class="s1">&#39;UUID&#39;</span><span class="p">:</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">UUID</span><span class="p">()</span>
+                         <span class="p">}</span>
+            <span class="n">tar_field</span> <span class="o">=</span> <span class="n">map_dict</span><span class="p">[</span><span class="n">reg_obj_type</span><span class="p">]</span> <span class="ow">or</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Nested</span><span class="p">(</span><span class="n">reg_obj</span><span class="p">())</span>
+
+            <span class="k">class</span> <span class="nc">ExtSchema</span><span class="p">(</span><span class="n">marshmallow</span><span class="o">.</span><span class="n">Schema</span><span class="p">):</span>
+                <span class="n">_value</span> <span class="o">=</span> <span class="n">tar_field</span>
+                <span class="n">_type</span> <span class="o">=</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Str</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span><span class="n">key</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">ExtSchema</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">PseudoSchema</span><span class="p">:</span>
+                <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;_value&#39;</span><span class="p">:</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;_value&#39;</span><span class="p">],</span> <span class="s1">&#39;_type&#39;</span><span class="p">:</span> <span class="n">key</span><span class="p">}</span>
+
+                <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_dict</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">value_dict</span>
+
+            <span class="k">return</span> <span class="n">PseudoSchema</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TypedJsonSerializer_OLD.serialize"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer_OLD.serialize">[docs]</a>    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">type_hint</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_bytes</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">type_hint</span> <span class="ow">or</span> <span class="n">get_col_type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="n">key_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_map</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">key_type</span> <span class="o">==</span> <span class="s1">&#39;#unregistered#&#39;</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="s1">&#39;#unregistered#&#39;</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_schema</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;dc&#39;</span><span class="p">,</span> <span class="s1">&#39;List[dc]&#39;</span><span class="p">,</span> <span class="s1">&#39;Dict[str,dc]&#39;</span><span class="p">]:</span>
+            <span class="nd">@dataclass</span>
+            <span class="k">class</span> <span class="nc">Wrapper</span><span class="p">:</span>
+                <span class="n">_value</span><span class="p">:</span> <span class="n">Any</span>
+            <span class="k">if</span> <span class="n">key_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;dc&#39;</span><span class="p">,</span> <span class="s1">&#39;List[dc]&#39;</span><span class="p">]:</span>
+                <span class="n">ext_value</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Wrapper</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nd">@dataclass</span>
+                <span class="k">class</span> <span class="nc">ValueContainer</span><span class="p">:</span>
+                    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+                    <span class="n">value</span><span class="p">:</span> <span class="n">Any</span>
+                <span class="n">ext_value</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Wrapper</span><span class="p">([</span><span class="n">ValueContainer</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;key=&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&quot;, serializing &quot;</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+            <span class="n">ext_value</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s1">&#39;_value&#39;</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">ext_value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">as_bytes</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="TypedJsonSerializer_OLD.deserialize"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.so_ana_json.TypedJsonSerializer_OLD.deserialize">[docs]</a>    <span class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value_serialized</span><span class="p">,</span> <span class="n">as_bytes</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">as_bytes</span><span class="p">:</span>
+            <span class="n">value_serialized</span> <span class="o">=</span> <span class="n">value_serialized</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="n">json_type</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value_serialized</span><span class="p">)[</span><span class="s1">&#39;_type&#39;</span><span class="p">]</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_schema</span><span class="p">(</span><span class="n">json_type</span><span class="p">)</span>
+        <span class="n">schema_data</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">value_serialized</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">schema_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">schema_data</span><span class="p">[</span><span class="s1">&#39;_value&#39;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">schema_data</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_type_map</span><span class="p">[</span><span class="n">json_type</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Dict[str,dc]&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="n">obj</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">obj</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">schema_data</span><span class="o">.</span><span class="n">_value</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">schema_data</span><span class="o">.</span><span class="n">_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not deserialize &quot;</span><span class="si">{</span><span class="n">value_serialized</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+
+    <span class="nd">@dataclass</span>
+    <span class="k">class</span> <span class="nc">SampleDC</span><span class="p">:</span>
+        <span class="n">value</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">class</span> <span class="nc">MMSchema</span><span class="p">(</span><span class="n">marshmallow</span><span class="o">.</span><span class="n">Schema</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">marshmallow</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">Int</span><span class="p">()</span>
+
+    <span class="n">registry</span> <span class="o">=</span> <span class="n">TypedJsonSerializer</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">registry</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">interm</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;done&#39;</span><span class="p">)</span>
+    <span class="n">registry</span><span class="o">.</span><span class="n">register_schema</span><span class="p">(</span><span class="n">SampleDC</span><span class="p">)</span>
+    <span class="n">registry</span><span class="o">.</span><span class="n">register_schema</span><span class="p">(</span><span class="n">MMSchema</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">_registry</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Data class&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">SampleDC</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span> <span class="n">as_bytes</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">,</span> <span class="n">as_bytes</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;MM-Schema&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">({</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">42</span><span class="p">},</span> <span class="n">type_hint</span><span class="o">=</span><span class="s1">&#39;MMSchema&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Plain-Vanilla&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">({</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">42</span><span class="p">})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Plain-Vanilla unregistered&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">({</span><span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;no&#39;</span><span class="p">},</span> <span class="n">type_hint</span><span class="o">=</span><span class="s1">&#39;someting&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Plain types&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;Hello world!&#39;</span><span class="p">,</span> <span class="mf">3.24</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; ---&gt; &#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+        <span class="n">erg</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">erg</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">erg</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Plain type with type hint&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">type_hint</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="n">erg</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">erg</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">erg</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Collections&#39;</span><span class="p">)</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">([</span><span class="n">SampleDC</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span> <span class="n">SampleDC</span><span class="p">(</span><span class="mi">17</span><span class="p">)])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">))</span>
+    <span class="n">json_str</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">serialize</span><span class="p">({</span><span class="s1">&#39;value_1&#39;</span><span class="p">:</span> <span class="n">SampleDC</span><span class="p">(</span><span class="mi">42</span><span class="p">),</span> <span class="s1">&#39;value_2&#39;</span><span class="p">:</span> <span class="n">SampleDC</span><span class="p">(</span><span class="mi">17</span><span class="p">)})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json_str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, HBernigau.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

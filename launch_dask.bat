@@ -1,0 +1,1 @@
+start cmd /k "TITLE DASK & call activate_venv.bat & python so_ana.py start-dask-cluster 4"

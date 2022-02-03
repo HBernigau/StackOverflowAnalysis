@@ -1,0 +1,12 @@
+jupyterlab
+plotly
+matplotlib
+pyLDAvis
+wordcloud
+openpyxl
+seaborn
+networkx
+ipywidgets
+statsmodels
+scikit-learn
+scipy

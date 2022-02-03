@@ -1,0 +1,95 @@
+version: "3"
+
+networks:
+    so_ana_net:
+        driver: bridge
+    prefect-server:
+        name: prefect-server
+    
+services:
+
+    so_ana_postgres:
+        build: ./Docker/postgresql
+        container_name: so_ana_postgres_container_final
+        environment:
+            - POSTGRES_PASSWORD=${PG_PW}
+            - POSTGRES_USER=${PG_USER}
+            - POSTGRES_DB=${PG_DB}
+            - PGDATA=/var/lib/postgresql/data/pgdata
+        ports:
+            - "${HOST_PG_PORT}:5432"
+        volumes:
+            - so_ana_postgresdata_final:/var/lib/postgresql/data/pgdata
+            - ./Docker/directories/pg_backup/:/pg_backup/
+        networks: 
+            - so_ana_net
+            - prefect-server
+   
+    so_ana_pgadmin:
+        image: dpage/pgadmin4
+        container_name: so_ana_pgadmin_container_final
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+            - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PW}
+            - PGADMIN_ENABLE_TLS=
+        ports:
+            - "${HOST_PGADMIN_PORT}:80"
+        depends_on:
+            - so_ana_postgres
+        volumes:
+            - so_ana_pgadmindata_final:/var/lib/pgadmin
+            - so_ana_pgadmin4data_final:/pgadmin4
+            - ./Docker/directories/pgadmin_config_data/servers.json:/pgadmin4/servers.json 
+        networks: 
+            - so_ana_net      
+
+    so_ana_elastic_search:
+        build: ./Docker/elasticsearch
+        container_name: so_ana_elastic_search_container_final
+        environment:
+            - discovery.type=single-node
+            - SNAPSHOT_NAME=snapshot_1
+            
+        networks:
+            - so_ana_net
+        volumes:
+            - ./Docker/directories/elastic_search_data/:/usr/share/elasticsearch/data
+            - ./Docker/directories/es_config_data/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+            - ./Docker/directories/es_backup/:/es_backup/
+        ports:
+            - "${HOST_ES_PORT}:9200"
+            
+    so_ana_kibana:
+        image: docker.elastic.co/kibana/kibana:7.9.3
+        container_name: so_ana_kibana_container_final
+        environment:
+            - SERVER_NAME=kibana
+            - ELASTICSEARCH_URL=http://so_ana_elastic_search:${HOST_ES_PORT}
+            - ELASTICSEARCH_HOSTS=http://so_ana_elastic_search:${HOST_ES_PORT}
+        networks:
+            - so_ana_net 
+        ports:
+            - "${HOST_KIBANA_PORT}:5601"
+        depends_on:
+            - so_ana_elastic_search
+            
+    so_ana_init:
+        build: ./Docker/py
+        container_name: so_ana_init_container_final
+        volumes:
+            - .:/python/    
+            - ./Docker/directories/init/:/init/
+        environment:
+            - PYTHONPATH=/python
+        networks:
+            - so_ana_net   
+        command: sh /init/tear_up.sh
+        depends_on:
+            - so_ana_postgres
+            - so_ana_elastic_search
+            
+        
+volumes:
+    so_ana_postgresdata_final:
+    so_ana_pgadmindata_final:
+    so_ana_pgadmin4data_final: 

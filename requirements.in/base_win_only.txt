@@ -1,0 +1,2 @@
+prefect[templates,viz]>=0.15.2
+bokeh

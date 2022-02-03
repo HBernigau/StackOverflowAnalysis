@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>so_ana_doc_worker.so_ana_reporting &mdash; SO_analysis 1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> SO_analysis
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/how_to_run.html">How to run stack overflow analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/API_doc.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SO_analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>so_ana_doc_worker.so_ana_reporting</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for so_ana_doc_worker.so_ana_reporting</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">contains utilities for reporting of LDA results</span>
+
+<span class="sd">Author: `HBernigau &lt;https://github.com/HBernigau&gt;`_</span>
+<span class="sd">Date: 01.2022</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="c1"># hide DeprecationWarnings from moduls import</span>
+<span class="kn">import</span> <span class="nn">pyLDAvis</span>
+<span class="kn">import</span> <span class="nn">pyLDAvis.gensim</span>
+<span class="kn">from</span> <span class="nn">gensim.models.ldamodel</span> <span class="kn">import</span> <span class="n">LdaModel</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">__stderr__</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">text</span>
+<span class="kn">from</span> <span class="nn">wordcloud</span> <span class="kn">import</span> <span class="n">WordCloud</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">gensim.corpora</span> <span class="kn">import</span> <span class="n">Dictionary</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_management.management_utils</span> <span class="k">as</span> <span class="nn">so_ana_mu</span>
+<span class="kn">from</span> <span class="nn">so_ana_util.data_access</span> <span class="kn">import</span> <span class="n">get_doc_iterator</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy_models.db_deps</span> <span class="kn">import</span> <span class="n">prod_db_deps_container</span><span class="p">,</span> <span class="n">dict_to_es_key</span>
+<span class="kn">import</span> <span class="nn">so_ana_doc_worker.schemas</span> <span class="k">as</span> <span class="nn">so_ana_worker_schemas</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">)</span>
+
+<span class="n">desired_width</span> <span class="o">=</span> <span class="mi">620</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.width&#39;</span><span class="p">,</span> <span class="n">desired_width</span><span class="p">)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="n">desired_width</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s1">&#39;display.max_columns&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_deps"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.get_deps">[docs]</a><span class="k">def</span> <span class="nf">get_deps</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">prod_db_deps_container</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReportingDataAccess"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ReportingDataAccess</span><span class="p">:</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="ReportingDataAccess.load_job_data"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.load_job_data">[docs]</a>    <span class="k">def</span> <span class="nf">load_job_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sqla_session</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">job_data</span> <span class="o">=</span> <span class="n">sqla_session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">so_ana_mu</span><span class="o">.</span><span class="n">JobOverview</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;flow_run_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_run_id</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">job_data</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_rel_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select step, step_label, prev_step_lbls &#39;</span> \
+             <span class="s1">&#39;from so_ana_management.steps_overview &#39;</span> \
+             <span class="s1">&#39;where flow_run_id = </span><span class="si">%(flow_run_id)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and step=</span><span class="se">\&#39;</span><span class="s1">#8</span><span class="se">\&#39;</span><span class="s1">&#39;</span>
+        <span class="n">qu_res</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;flow_run_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_run_id</span><span class="p">})</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="n">step_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">step_set</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">qu_res</span><span class="p">[</span><span class="s1">&#39;step&#39;</span><span class="p">],</span> <span class="n">qu_res</span><span class="p">[</span><span class="s1">&#39;step_label&#39;</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">prev_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">qu_res</span><span class="p">[</span><span class="s1">&#39;prev_step_lbls&#39;</span><span class="p">]):</span>
+            <span class="n">step_set</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="sa">f</span><span class="s1">&#39;#</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">prev_label</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">step_set</span>
+
+<div class="viewcode-block" id="ReportingDataAccess.load_job_step_data"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.load_job_step_data">[docs]</a>    <span class="k">def</span> <span class="nf">load_job_step_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sqla_session</span><span class="p">):</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqla_session</span><span class="o">.</span><span class="n">connection</span><span class="p">()</span>
+        <span class="n">step_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rel_steps</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">step_set</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">sqla_session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">so_ana_mu</span><span class="o">.</span><span class="n">JobStepOverview</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+            <span class="n">res</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">step</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="ReportingDataAccess.load_artefacts"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.load_artefacts">[docs]</a>    <span class="k">def</span> <span class="nf">load_artefacts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sqla_session</span><span class="p">):</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">sqla_session</span><span class="o">.</span><span class="n">connection</span><span class="p">()</span>
+        <span class="n">step_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rel_steps</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+        <span class="n">rec_lst</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">step_set</span><span class="p">:</span>
+            <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select step, step_label, artefact_key, artefact_value &#39;</span> \
+                 <span class="s1">&#39;from so_ana_management.artefacts &#39;</span> \
+                 <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> and step_label=</span><span class="si">%(step_label)s</span><span class="s1">&#39;</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]})</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="n">rec_lst</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">row</span><span class="o">.</span><span class="n">_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+        <span class="n">serializer</span> <span class="o">=</span> <span class="n">so_ana_mu</span><span class="o">.</span><span class="n">get_proj_serializer</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">rec_lst</span><span class="p">:</span>
+            <span class="n">item</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">]),</span> <span class="n">as_bytes</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rec_lst</span></div>
+
+<div class="viewcode-block" id="ReportingDataAccess.load_all_job_data"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.load_all_job_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load_all_job_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s1">&#39;select * from so_ana_management.job_overview&#39;</span><span class="p">,</span> <span class="n">con</span><span class="o">=</span><span class="n">connection</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ReportingDataAccess.load_all_step_data_for_flow_run_id"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.load_all_step_data_for_flow_run_id">[docs]</a>    <span class="k">def</span> <span class="nf">load_all_step_data_for_flow_run_id</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">flow_run_id</span><span class="p">):</span>
+        <span class="n">qu</span><span class="o">=</span> <span class="s1">&#39;select * from so_ana_management.steps_overview &#39;</span> \
+            <span class="s1">&#39;where flow_run_id=</span><span class="si">%(flow_run_id)s</span><span class="s1"> and step=</span><span class="si">%(step)s</span><span class="s1">&#39;</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">res_8</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+                 <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;flow_run_id&#39;</span><span class="p">:</span> <span class="n">flow_run_id</span><span class="p">,</span> <span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="s1">&#39;#8&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res_8</span><span class="p">)</span>
+
+        <span class="n">qu</span><span class="o">=</span> <span class="s1">&#39;select * from so_ana_management.steps_overview &#39;</span> \
+            <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> and step_label=</span><span class="si">%(step_label)s</span><span class="s1">&#39;</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">step_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">res_8</span><span class="p">[</span><span class="s1">&#39;prev_step_lbls&#39;</span><span class="p">]):</span>
+            <span class="n">res_new</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span>
+                       <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">connection</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s1">&#39;#</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="n">step_label</span><span class="p">})</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res_new</span><span class="p">)</span>
+        <span class="n">final</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_records</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="n">final</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;step&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">final</span></div>
+
+<div class="viewcode-block" id="ReportingDataAccess.show_raw_post"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.show_raw_post">[docs]</a>    <span class="k">def</span> <span class="nf">show_raw_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">connection</span><span class="p">,</span>
+                      <span class="n">d2es</span><span class="p">,</span>
+                      <span class="n">post_ord_key</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ReportingDataAccess.show_raw_page"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ReportingDataAccess.show_raw_page">[docs]</a>    <span class="k">def</span> <span class="nf">show_raw_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">connection</span><span class="p">,</span>
+                      <span class="n">d2es</span><span class="p">,</span>
+                      <span class="n">post_ord_key</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="WCReports"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.WCReports">[docs]</a><span class="k">class</span> <span class="nc">WCReports</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deps_obj</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">step_label</span><span class="p">,</span> <span class="n">base_content</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deps</span> <span class="o">=</span> <span class="n">deps_obj</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_label</span> <span class="o">=</span> <span class="n">step_label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_content</span> <span class="o">=</span> <span class="n">base_content</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_get_wc</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">WordCloud</span><span class="p">(</span><span class="n">background_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1920</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">1080</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_save_if_not_null</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">wc</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">file_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">wc</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WCReports.wc_for_doc"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.WCReports.wc_for_doc">[docs]</a>    <span class="k">def</span> <span class="nf">wc_for_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ord_key</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">wc</span> <span class="o">=</span> <span class="n">WCReports</span><span class="o">.</span><span class="n">_get_wc</span><span class="p">()</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">dict_to_es_key</span><span class="p">({</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span> <span class="s1">&#39;ord_key&#39;</span><span class="p">:</span> <span class="n">ord_key</span><span class="p">})</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deps</span><span class="o">.</span><span class="n">d2es</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">so_ana_worker_schemas</span><span class="o">.</span><span class="n">BoWData</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">txt_freq_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">key_tokens</span><span class="p">,</span> <span class="n">doc</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+        <span class="n">wc</span><span class="o">.</span><span class="n">generate_from_frequencies</span><span class="p">(</span><span class="n">txt_freq_dict</span><span class="p">)</span>
+
+        <span class="n">WCReports</span><span class="o">.</span><span class="n">_save_if_not_null</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">wc</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;bilinear&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">plt</span></div>
+
+<div class="viewcode-block" id="WCReports.wc_for_corpus"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.WCReports.wc_for_corpus">[docs]</a>    <span class="k">def</span> <span class="nf">wc_for_corpus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ml_tags</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">wc</span> <span class="o">=</span> <span class="n">WCReports</span><span class="o">.</span><span class="n">_get_wc</span><span class="p">()</span>
+        <span class="n">txt_iterator</span> <span class="o">=</span> <span class="n">get_doc_iterator</span><span class="p">(</span><span class="n">connection</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">deps</span><span class="o">.</span><span class="n">conn</span><span class="p">,</span>
+                                        <span class="n">d2es_obj</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">deps</span><span class="o">.</span><span class="n">d2es</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">ml_tags</span> <span class="o">=</span> <span class="n">ml_tags</span><span class="p">,</span>
+                                        <span class="p">)</span>
+        <span class="n">counts_all</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">txt_freq_dict</span> <span class="ow">in</span> <span class="n">txt_iterator</span><span class="p">:</span>
+            <span class="n">counts_all</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">txt_freq_dict</span><span class="p">)</span>
+        <span class="n">wc</span><span class="o">.</span><span class="n">generate_from_frequencies</span><span class="p">(</span><span class="n">counts_all</span><span class="p">)</span>
+
+        <span class="n">WCReports</span><span class="o">.</span><span class="n">_save_if_not_null</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">wc</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;bilinear&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span></div>
+
+<div class="viewcode-block" id="WCReports.wc_for_topics_of_topic_model"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.WCReports.wc_for_topics_of_topic_model">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">wc_for_topics_of_topic_model</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">lda_model_obj</span><span class="p">,</span> <span class="n">topic_nr</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">topn</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">wc</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_get_wc</span><span class="p">()</span>
+
+        <span class="n">counts_all</span> <span class="o">=</span> <span class="p">{</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">lda_model_obj</span><span class="o">.</span><span class="n">show_topic</span><span class="p">(</span><span class="n">topicid</span><span class="o">=</span><span class="n">topic_nr</span><span class="p">,</span> <span class="n">topn</span><span class="o">=</span><span class="n">topn</span><span class="p">)}</span>
+        <span class="n">wc</span><span class="o">.</span><span class="n">generate_from_frequencies</span><span class="p">(</span><span class="n">counts_all</span><span class="p">)</span>
+
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_save_if_not_null</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">wc</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;bilinear&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span></div></div>
+
+
+<div class="viewcode-block" id="get_LDAvis_obj"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.get_LDAvis_obj">[docs]</a><span class="k">def</span> <span class="nf">get_LDAvis_obj</span><span class="p">(</span><span class="n">deps_obj</span><span class="p">,</span> <span class="n">step_label</span><span class="p">,</span> <span class="n">lda_model_obj</span><span class="p">,</span> <span class="n">gensim_dictionary</span><span class="p">):</span>
+    <span class="n">doc_iterator</span> <span class="o">=</span> <span class="n">get_doc_iterator</span><span class="p">(</span><span class="n">connection</span><span class="o">=</span><span class="n">deps_obj</span><span class="o">.</span><span class="n">conn</span><span class="p">,</span>
+                                    <span class="n">d2es_obj</span><span class="o">=</span><span class="n">deps_obj</span><span class="o">.</span><span class="n">d2es</span><span class="p">,</span>
+                                    <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;keys&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pyLDAvis</span><span class="o">.</span><span class="n">gensim</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">lda_model_obj</span><span class="p">,</span>
+                                   <span class="n">doc_iterator</span><span class="p">,</span>
+                                   <span class="n">gensim_dictionary</span>
+                                   <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LDA_from_artefact"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.LDA_from_artefact">[docs]</a><span class="k">def</span> <span class="nf">LDA_from_artefact</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="p">):</span>
+    <span class="n">lda_model_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">][</span><span class="s1">&#39;base_path&#39;</span><span class="p">],</span>
+                                  <span class="n">lda_model_artefact_obj</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">][</span><span class="s1">&#39;lda_key&#39;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">LdaModel</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">lda_model_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dictionary_from_artefact"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.dictionary_from_artefact">[docs]</a><span class="k">def</span> <span class="nf">dictionary_from_artefact</span><span class="p">(</span><span class="n">dict_artefact_obj</span><span class="p">):</span>
+    <span class="n">dict_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dict_artefact_obj</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">][</span><span class="s1">&#39;storage_path&#39;</span><span class="p">],</span>
+                             <span class="n">dict_artefact_obj</span><span class="p">[</span><span class="s1">&#39;artefact_value&#39;</span><span class="p">][</span><span class="s1">&#39;keys_dict&#39;</span><span class="p">][</span><span class="s1">&#39;dict_key&#39;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">Dictionary</span><span class="o">.</span><span class="n">load_from_text</span><span class="p">(</span><span class="n">dict_path</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generate_lda_vis"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.generate_lda_vis">[docs]</a><span class="k">def</span> <span class="nf">generate_lda_vis</span><span class="p">(</span><span class="n">dict_artefact_obj</span><span class="p">,</span>
+                     <span class="n">lda_model_artefact_obj</span><span class="p">,</span>
+                     <span class="n">deps_obj</span><span class="p">,</span>
+                     <span class="n">step_label</span><span class="p">,</span>
+                     <span class="n">target_file_html</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">target_file_json</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+    <span class="n">lda_model</span> <span class="o">=</span> <span class="n">LDA_from_artefact</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="p">)</span>
+    <span class="n">dictionary</span> <span class="o">=</span> <span class="n">dictionary_from_artefact</span><span class="p">(</span><span class="n">dict_artefact_obj</span><span class="p">)</span>
+    <span class="n">LDAvis_prepared</span> <span class="o">=</span> <span class="n">get_LDAvis_obj</span><span class="p">(</span><span class="n">deps_obj</span><span class="o">=</span><span class="n">deps_obj</span><span class="p">,</span>
+                                     <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                     <span class="n">lda_model_obj</span><span class="o">=</span><span class="n">lda_model</span><span class="p">,</span>
+                                     <span class="n">gensim_dictionary</span><span class="o">=</span><span class="n">dictionary</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target_file_html</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pyLDAvis</span><span class="o">.</span><span class="n">save_html</span><span class="p">(</span><span class="n">LDAvis_prepared</span><span class="p">,</span> <span class="n">target_file_html</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">target_file_json</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pyLDAvis</span><span class="o">.</span><span class="n">save_json</span><span class="p">(</span><span class="n">LDAvis_prepared</span><span class="p">,</span> <span class="n">target_file_json</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">LDAvis_prepared</span></div>
+
+
+<div class="viewcode-block" id="set_topic_values"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.set_topic_values">[docs]</a><span class="k">def</span> <span class="nf">set_topic_values</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="p">,</span>
+                     <span class="n">step_5_label</span><span class="p">:</span> <span class="nb">str</span>
+                     <span class="p">):</span>
+    <span class="n">lda_model</span> <span class="o">=</span> <span class="n">LDA_from_artefact</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtBowData"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.ExtBowData">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ExtBowData</span><span class="p">:</span>
+    <span class="n">ord_key</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">for_step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">for_step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">bow_data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span></div>
+
+
+<div class="viewcode-block" id="TopicResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.TopicResult">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">TopicResult</span><span class="p">:</span>
+    <span class="n">ord_key</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">for_step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">for_step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">topic_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">topic_weight</span><span class="p">:</span> <span class="nb">float</span></div>
+
+
+<div class="viewcode-block" id="pp_callback"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.pp_callback">[docs]</a><span class="k">def</span> <span class="nf">pp_callback</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ExtBowData</span><span class="p">(</span><span class="n">for_step</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                      <span class="n">for_step_label</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                      <span class="n">ord_key</span> <span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">ord_key</span><span class="p">,</span>
+                      <span class="n">post_id</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">post_id</span><span class="p">,</span>
+                      <span class="n">bow_data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">keys</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+                      <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="topic_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.so_ana_reporting.topic_iterator">[docs]</a><span class="k">def</span> <span class="nf">topic_iterator</span><span class="p">(</span><span class="n">deps</span><span class="p">,</span> <span class="n">for_step_label</span><span class="p">,</span> <span class="n">lda_model_artefact</span><span class="p">):</span>
+    <span class="n">doc_generator</span> <span class="o">=</span> <span class="n">get_doc_iterator</span><span class="p">(</span><span class="n">connection</span><span class="o">=</span><span class="n">deps</span><span class="o">.</span><span class="n">conn</span><span class="p">,</span>
+                                     <span class="n">d2es_obj</span><span class="o">=</span><span class="n">deps</span><span class="o">.</span><span class="n">d2es</span><span class="p">,</span>
+                                     <span class="n">step_label</span><span class="o">=</span><span class="n">for_step_label</span><span class="p">,</span>
+                                     <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;keys&#39;</span><span class="p">,</span>
+                                     <span class="n">ml_tags</span><span class="o">=</span><span class="kc">None</span>
+                                     <span class="p">)</span>
+
+    <span class="n">doc_generator</span><span class="o">.</span><span class="n">postprocess_callback</span><span class="o">=</span><span class="n">pp_callback</span>
+    <span class="n">lda_model</span><span class="o">=</span><span class="n">LDA_from_artefact</span><span class="p">(</span><span class="n">lda_model_artefact</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">doc_generator</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="n">lda_model</span><span class="o">.</span><span class="n">get_document_topics</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">bow_data</span><span class="p">,</span> <span class="n">minimum_probability</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">TopicResult</span><span class="p">(</span><span class="n">ord_key</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">ord_key</span><span class="p">,</span>
+                              <span class="n">post_id</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">post_id</span><span class="p">,</span>
+                              <span class="n">for_step</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">for_step</span><span class="p">,</span>
+                              <span class="n">for_step_label</span><span class="o">=</span><span class="n">doc</span><span class="o">.</span><span class="n">for_step_label</span><span class="p">,</span>
+                              <span class="n">topic_id</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">top</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                              <span class="n">topic_weight</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">top</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                              <span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="n">get_deps</span><span class="p">()</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">deps</span><span class="o">.</span><span class="n">conn</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">deps</span><span class="o">.</span><span class="n">session</span>
+    <span class="n">d2es</span> <span class="o">=</span> <span class="n">deps</span><span class="o">.</span><span class="n">d2es</span>
+
+    <span class="n">all_jobs</span> <span class="o">=</span> <span class="n">ReportingDataAccess</span><span class="o">.</span><span class="n">load_all_job_data</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+
+    <span class="n">flow_run_id</span> <span class="o">=</span> <span class="n">all_jobs</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;started_at_timest&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:][</span><span class="s1">&#39;flow_run_id&#39;</span><span class="p">]</span>
+    <span class="n">rep_data_access</span> <span class="o">=</span> <span class="n">ReportingDataAccess</span><span class="p">(</span><span class="n">flow_run_id</span><span class="p">)</span>
+    <span class="n">step_result_dict</span> <span class="o">=</span> <span class="n">rep_data_access</span><span class="o">.</span><span class="n">load_job_step_data</span><span class="p">(</span><span class="n">sqla_session</span><span class="o">=</span><span class="n">session</span><span class="p">)</span>
+    <span class="n">artefacts</span> <span class="o">=</span> <span class="n">rep_data_access</span><span class="o">.</span><span class="n">load_artefacts</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">artefacts</span><span class="p">)</span>
+
+    <span class="n">wc_report_obj</span> <span class="o">=</span> <span class="n">WCReports</span><span class="p">(</span><span class="n">deps_obj</span><span class="o">=</span><span class="n">deps</span><span class="p">,</span>
+                              <span class="n">step</span><span class="o">=</span><span class="s1">&#39;#3&#39;</span><span class="p">,</span>
+                              <span class="n">step_label</span><span class="o">=</span><span class="n">step_result_dict</span><span class="p">[</span><span class="s1">&#39;#3&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">step_label</span><span class="p">)</span>
+
+    <span class="n">lda_model_artefact</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">artefacts</span>
+                          <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;step&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;#6&#39;</span> <span class="ow">and</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;artefact_key&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;LDA_model_data&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dict_artefact</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">artefacts</span>
+                     <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;step&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;#5&#39;</span> <span class="ow">and</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;artefact_key&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;dictionary&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">generate_lda_vis</span><span class="p">(</span><span class="n">lda_model_artefact_obj</span><span class="o">=</span><span class="n">lda_model_artefact</span><span class="p">,</span>
+                     <span class="n">dict_artefact_obj</span><span class="o">=</span><span class="n">dict_artefact</span><span class="p">,</span>
+                     <span class="n">deps_obj</span><span class="o">=</span><span class="n">deps</span><span class="p">,</span>
+                     <span class="n">step_label</span><span class="o">=</span><span class="n">step_result_dict</span><span class="p">[</span><span class="s1">&#39;#5&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                     <span class="n">target_file_html</span><span class="o">=</span><span class="s1">&#39;dummy.html&#39;</span><span class="p">,</span>
+                     <span class="n">target_file_json</span><span class="o">=</span><span class="s1">&#39;dummy.json&#39;</span><span class="p">)</span>
+
+    <span class="n">lda_model</span> <span class="o">=</span> <span class="n">LDA_from_artefact</span><span class="p">(</span><span class="n">lda_model_artefact</span><span class="p">)</span>
+    <span class="n">dictionary</span> <span class="o">=</span> <span class="n">dictionary_from_artefact</span><span class="p">(</span><span class="n">dict_artefact</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">get_topics</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">print_topic</span><span class="p">(</span><span class="mi">0</span><span class="p">)))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">print_topics</span><span class="p">(</span><span class="n">num_topics</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_words</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">show_topics</span><span class="p">(</span><span class="n">num_topics</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num_words</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">formatted</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">topic</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">show_topic</span><span class="p">(</span><span class="n">topicid</span><span class="o">=</span><span class="n">topic</span><span class="p">,</span> <span class="n">topn</span><span class="o">=</span><span class="mi">30</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">lda_model</span><span class="o">.</span><span class="n">show_topic</span><span class="p">(</span><span class="n">topicid</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">topn</span><span class="o">=</span><span class="mi">10</span><span class="p">)))</span>
+
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;LDA topics...&#39;</span><span class="p">)</span>
+    <span class="n">topic_portion_sum_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">doc_iter</span> <span class="o">=</span> <span class="n">get_doc_iterator</span><span class="p">(</span><span class="n">connection</span><span class="o">=</span><span class="n">deps</span><span class="o">.</span><span class="n">conn</span><span class="p">,</span>
+                                <span class="n">d2es_obj</span><span class="o">=</span><span class="n">deps</span><span class="o">.</span><span class="n">d2es</span><span class="p">,</span>
+                                <span class="n">step_label</span><span class="o">=</span><span class="n">step_result_dict</span><span class="p">[</span><span class="s1">&#39;#5&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                                <span class="nb">format</span> <span class="o">=</span><span class="s1">&#39;keys&#39;</span><span class="p">,</span>
+                                <span class="n">ml_tags</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">doc_iter</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">doc_iter</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">topic_id</span><span class="p">,</span> <span class="n">fraction</span> <span class="ow">in</span> <span class="n">lda_model</span><span class="p">[</span><span class="n">doc</span><span class="p">]:</span>
+            <span class="n">topic_portion_sum_dict</span><span class="p">[</span><span class="n">topic_id</span><span class="p">]</span> <span class="o">+=</span> <span class="n">fraction</span><span class="o">/</span><span class="n">total</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">topic_portion_sum_dict</span><span class="p">)</span>
+
+    <span class="c1">#for topic in range(5):</span>
+    <span class="c1">#    dummy = WCReports.wc_for_topics_of_topic_model(lda_model_obj=lda_model,</span>
+    <span class="c1">#                                                   topic_nr=topic,</span>
+    <span class="c1">#                                                   file_name=f&#39;dummy_topic_{topic}.png&#39;,</span>
+    <span class="c1">#                                                   topn=100)</span>
+
+    <span class="c1"># to do: coherence measures: http://svn.aksw.org/papers/2015/WSDM_Topic_Evaluation/public.pdf</span>
+    <span class="c1">#           and https://rare-technologies.com/what-is-topic-coherence/</span>
+    <span class="c1">#           https: // radimrehurek.com / gensim / auto_examples / tutorials / run_lda.html</span>
+    <span class="c1">#        trigrams, filter extremes (compare https://radimrehurek.com/gensim/auto_examples/tutorials/run_lda.html)</span>
+    <span class="c1">#        https://radimrehurek.com/gensim/models/ldamodel.html</span>
+    <span class="c1">#        play with hyper parameters: alpha, num_topics, ierations=20</span>
+    <span class="c1">#        article: https://www.di.ens.fr/~fbach/mdhnips2010.pdf</span>
+    <span class="c1">#        check if &quot;diff&quot; is usefull (https://radimrehurek.com/gensim/models/ldamodel.html)</span>
+    <span class="c1">#        EM in LDA</span>
+
+    <span class="c1">#        get_document_topics(bow, minimum_probability=None, minimum_phi_value=None, per_word_topics=False)</span>
+    <span class="c1">#        get_term_topics(word_id, minimum_probability=None)</span>
+    <span class="c1">#        get_topic_terms(topicid, topn=10)</span>
+    <span class="c1">#        log_perplexity(chunk, total_docs=None)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, HBernigau.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

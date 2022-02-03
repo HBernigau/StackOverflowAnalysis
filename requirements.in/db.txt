@@ -1,0 +1,4 @@
+SQLAlchemy>=1.4
+alembic
+elasticsearch
+psycopg2

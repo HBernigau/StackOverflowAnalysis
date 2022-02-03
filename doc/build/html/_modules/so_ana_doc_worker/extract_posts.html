@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>so_ana_doc_worker.extract_posts &mdash; SO_analysis 1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> SO_analysis
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/how_to_run.html">How to run stack overflow analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/API_doc.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SO_analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>so_ana_doc_worker.extract_posts</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for so_ana_doc_worker.extract_posts</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">contains utilities for extraction of posts</span>
+
+<span class="sd">Author: `HBernigau &lt;https://github.com/HBernigau&gt;`_</span>
+<span class="sd">Date: 01.2022</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_doc_worker.extr_post_deps</span> <span class="k">as</span> <span class="nn">extr_post_deps</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">from</span> <span class="nn">so_ana_doc_worker.schemas</span> <span class="kn">import</span> <span class="n">PostMetaData</span><span class="p">,</span> <span class="n">PageRawData</span><span class="p">,</span> <span class="n">ExtractResult</span><span class="p">,</span> \
+    <span class="n">DownloadPostResult</span><span class="p">,</span> <span class="n">DownloadPageResult</span><span class="p">,</span>  <span class="n">PostRawData</span><span class="p">,</span> <span class="n">WorkerSummaryReport</span><span class="p">,</span> \
+    <span class="n">DownloadPageFullResult</span><span class="p">,</span> <span class="n">DownloadPostFullResult</span><span class="p">,</span> <span class="n">ExtractFullResult</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy_models.db_deps</span> <span class="kn">import</span> <span class="n">prod_db_deps_container</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">numpy.random</span> <span class="kn">import</span> <span class="n">choice</span>
+
+<div class="viewcode-block" id="extract_nr_pages"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extract_posts.extract_nr_pages">[docs]</a><span class="k">def</span> <span class="nf">extract_nr_pages</span><span class="p">(</span><span class="n">logger</span><span class="p">,</span> <span class="n">downloader</span><span class="p">,</span> <span class="n">topic</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">downloader</span><span class="o">.</span><span class="n">metadata_by_topic_and_page</span><span class="p">(</span><span class="n">topic</span> <span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Request-Error: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">err_msg</span><span class="si">}</span><span class="s1">&quot;, cirquit-closed: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">circuit_closed</span><span class="si">}</span><span class="s1">&quot; waiting for 2 seconds...&#39;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="s1">&#39;html.parser&#39;</span><span class="p">)</span>
+    <span class="n">max_nr</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;s-pagination--item&#39;</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[])</span> <span class="ow">and</span> <span class="s1">&#39;go to page&#39;</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">new_page_nr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">get_text</span><span class="p">())</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">new_page_nr</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">max_nr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_nr</span><span class="p">,</span> <span class="n">new_page_nr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">max_nr</span></div>
+
+
+
+<div class="viewcode-block" id="download_page"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extract_posts.download_page">[docs]</a><span class="k">def</span> <span class="nf">download_page</span><span class="p">(</span>  <span class="n">downloader</span><span class="p">,</span>
+                    <span class="n">topic</span><span class="p">,</span>
+                    <span class="n">logger</span><span class="p">,</span>
+                    <span class="n">step</span><span class="p">,</span>
+                    <span class="n">step_label</span><span class="p">,</span>
+                    <span class="n">ord_key</span><span class="p">,</span>
+                    <span class="n">modus</span><span class="p">):</span>
+    <span class="n">page_number</span> <span class="o">=</span> <span class="n">ord_key</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">downloader</span><span class="o">.</span><span class="n">metadata_by_topic_and_page</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span><span class="n">page_number</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Request-Error: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">err_msg</span><span class="si">}</span><span class="s1">&quot;, cirquit-closed: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">circuit_closed</span><span class="si">}</span><span class="s1">&quot; waiting for 2 seconds...&#39;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+    <span class="n">raw_page_content</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw_page_content</span> <span class="o">=</span> <span class="n">PageRawData</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                       <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                       <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                       <span class="n">page_nr</span> <span class="o">=</span> <span class="n">page_number</span><span class="p">,</span>
+                                       <span class="n">request_code</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">code</span><span class="p">,</span>
+                                       <span class="n">circuit_closed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">circuit_closed</span><span class="p">,</span>
+                                       <span class="n">err_msg</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">err_msg</span><span class="p">,</span>
+                                       <span class="n">content_raw</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
+                                       <span class="n">modus</span><span class="o">=</span><span class="n">modus</span><span class="p">)</span>
+
+        <span class="c1"># save_to_db(data=raw_page_content, key_lst=[&#39;step&#39;, &#39;step_label&#39;, &#39;ord_key&#39;], to_pg = False, to_es = True)</span>
+
+        <span class="n">dwnl_res</span> <span class="o">=</span> <span class="n">DownloadPageResult</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                      <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                      <span class="n">ord_key</span><span class="o">=</span> <span class="n">ord_key</span><span class="p">,</span>
+                                      <span class="n">page_nr</span><span class="o">=</span><span class="n">page_number</span><span class="p">,</span>
+                                      <span class="n">exit_code</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                      <span class="n">exit_message</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error when writing to data bases, &quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+        <span class="n">dwnl_res</span> <span class="o">=</span> <span class="n">DownloadPageResult</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                      <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                      <span class="n">page_nr</span><span class="o">=</span><span class="n">page_number</span><span class="p">,</span>
+                                      <span class="n">exit_code</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                      <span class="n">exit_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">DownloadPageFullResult</span><span class="p">(</span>  <span class="n">dwnl_page_result</span><span class="o">=</span><span class="n">dwnl_res</span><span class="p">,</span>
+                                    <span class="n">raw_page_content</span><span class="o">=</span><span class="n">raw_page_content</span>
+                                    <span class="p">)</span></div>
+
+<div class="viewcode-block" id="download_post"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extract_posts.download_post">[docs]</a><span class="k">def</span> <span class="nf">download_post</span><span class="p">(</span>  <span class="n">downloader</span><span class="p">,</span>
+                    <span class="n">logger</span><span class="p">,</span>
+                    <span class="n">step</span><span class="p">,</span>
+                    <span class="n">step_label</span><span class="p">,</span>
+                    <span class="n">post_id</span><span class="p">,</span>
+                    <span class="n">ord_key</span><span class="p">,</span>
+                    <span class="n">ml_tag</span><span class="p">,</span>
+                    <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">downloader</span><span class="o">.</span><span class="n">post_by_id</span><span class="p">(</span><span class="n">post_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Request-Error: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">err_msg</span><span class="si">}</span><span class="s1">&quot;, cirquit-closed: &quot;</span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">circuit_closed</span><span class="si">}</span><span class="s1">&quot; waiting for 2 seconds...&#39;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+
+    <span class="n">raw_page_content</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw_page_content</span> <span class="o">=</span> <span class="n">PostRawData</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                       <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                       <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                       <span class="n">post_id</span> <span class="o">=</span> <span class="n">post_id</span><span class="p">,</span>
+                                       <span class="n">request_code</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">code</span><span class="p">,</span>
+                                       <span class="n">circuit_closed</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">circuit_closed</span><span class="p">,</span>
+                                       <span class="n">err_msg</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">err_msg</span><span class="p">,</span>
+                                       <span class="n">content_raw</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">content</span><span class="p">,</span>
+                                       <span class="n">modus</span><span class="o">=</span><span class="n">modus</span><span class="p">,</span>
+                                       <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span><span class="p">)</span>
+
+        <span class="n">dwnl_res</span> <span class="o">=</span> <span class="n">DownloadPostResult</span><span class="p">(</span>  <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                        <span class="n">post_id</span><span class="o">=</span><span class="n">post_id</span><span class="p">,</span>
+                                        <span class="n">exit_code</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                        <span class="n">exit_message</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                        <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error when writing to data bases, &quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+        <span class="n">dwnl_res</span> <span class="o">=</span> <span class="n">DownloadPostResult</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                      <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                      <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                      <span class="n">post_id</span><span class="o">=</span><span class="n">post_id</span><span class="p">,</span>
+                                      <span class="n">exit_code</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                      <span class="n">exit_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span>
+                                      <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DownloadPostFullResult</span><span class="p">(</span>  <span class="n">dwnl_post_result</span><span class="o">=</span><span class="n">dwnl_res</span><span class="p">,</span>
+                                    <span class="n">raw_post_content</span><span class="o">=</span><span class="n">raw_page_content</span>
+                                    <span class="p">)</span></div>
+
+<div class="viewcode-block" id="extract_meta"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extract_posts.extract_meta">[docs]</a><span class="k">def</span> <span class="nf">extract_meta</span><span class="p">(</span><span class="n">raw_page_content</span><span class="p">,</span>
+                 <span class="n">logger</span><span class="p">,</span>
+                 <span class="n">step</span><span class="p">,</span>
+                 <span class="n">step_label</span><span class="p">,</span>
+                 <span class="n">ord_key_generator</span><span class="p">,</span>
+                 <span class="n">test_fraction</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>
+                 <span class="n">val_fraction</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>
+                 <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span>
+                 <span class="p">):</span>
+    <span class="n">res_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">raw_page_content</span><span class="o">.</span><span class="n">content_raw</span><span class="p">,</span> <span class="s1">&#39;html.parser&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">div_question_summary_cont</span> <span class="ow">in</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;div&#39;</span><span class="p">):</span>
+        <span class="n">ord_key</span><span class="o">=</span><span class="kc">None</span>
+        <span class="k">if</span> <span class="s1">&#39;question-summary&#39;</span> <span class="ow">in</span> <span class="n">div_question_summary_cont</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">post_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">ml_tag</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">choice</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">size</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">p</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="n">test_fraction</span> <span class="o">-</span> <span class="n">val_fraction</span><span class="p">,</span> <span class="n">val_fraction</span><span class="p">,</span> <span class="n">test_fraction</span><span class="p">]))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">post_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">div_question_summary_cont</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">][</span><span class="mi">17</span><span class="p">:])</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;processing post-id: </span><span class="si">{</span><span class="n">post_id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">li</span> <span class="ow">in</span> <span class="n">div_question_summary_cont</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="s1">&#39;question-hyperlink&#39;</span> <span class="ow">in</span> <span class="n">li</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">post_url</span> <span class="o">=</span> <span class="n">li</span><span class="p">[</span><span class="s1">&#39;href&#39;</span><span class="p">]</span>
+                        <span class="n">heading</span> <span class="o">=</span> <span class="n">li</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
+
+                <span class="k">for</span> <span class="n">span_item</span> <span class="ow">in</span> <span class="n">div_question_summary_cont</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;span&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="s1">&#39;vote-count-post&#39;</span> <span class="ow">in</span> <span class="n">span_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">votes</span> <span class="o">=</span> <span class="n">span_item</span><span class="o">.</span><span class="n">strong</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
+
+                <span class="k">for</span> <span class="n">div_item</span> <span class="ow">in</span> <span class="n">div_question_summary_cont</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;div&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="s1">&#39;views&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">views</span> <span class="o">=</span> <span class="n">div_item</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">][:</span><span class="o">-</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="s1">&#39;status&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">answers</span> <span class="o">=</span> <span class="n">div_item</span><span class="o">.</span><span class="n">strong</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
+                        <span class="n">answer_status_lst</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">div_item</span><span class="p">[</span><span class="s1">&#39;class&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;status&#39;</span><span class="p">]</span>
+                        <span class="n">answer_status</span> <span class="o">=</span> <span class="n">answer_status_lst</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                    <span class="k">elif</span> <span class="s1">&#39;excerpt&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">excerpt</span> <span class="o">=</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="s1">&#39;user-action-time&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">asked_date</span> <span class="o">=</span> <span class="n">div_item</span><span class="o">.</span><span class="n">span</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="s1">&#39;user-details&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">user</span> <span class="o">=</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">,</span> <span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">user_url</span> <span class="o">=</span> <span class="n">div_item</span><span class="o">.</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;href&#39;</span><span class="p">]</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="n">user_url</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">elif</span> <span class="s1">&#39;tags&#39;</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="p">[]):</span>
+                        <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="k">for</span> <span class="n">li</span> <span class="ow">in</span> <span class="n">div_item</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">):</span>
+                            <span class="n">tags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">li</span><span class="o">.</span><span class="n">get_text</span><span class="p">())</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">pass</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">asked_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">asked_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;Z&#39;</span><span class="p">,</span> <span class="s1">&#39;+00:00&#39;</span><span class="p">),</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S%z&#39;</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">asked_date</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="n">ord_key</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">ord_key_generator</span><span class="p">)</span>
+                <span class="n">res_data</span> <span class="o">=</span> <span class="n">PostMetaData</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                        <span class="n">post_id</span><span class="o">=</span><span class="n">post_id</span><span class="p">,</span>
+                                        <span class="n">post_meta_extracted_date</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+                                        <span class="n">post_url</span><span class="o">=</span><span class="n">post_url</span><span class="p">,</span>
+                                        <span class="n">heading</span><span class="o">=</span><span class="n">heading</span><span class="p">,</span>
+                                        <span class="n">excerpt</span><span class="o">=</span><span class="n">excerpt</span><span class="p">,</span>
+                                        <span class="n">asked_date</span><span class="o">=</span><span class="n">asked_date</span><span class="p">,</span>
+                                        <span class="n">votes</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">votes</span><span class="p">),</span>
+                                        <span class="n">answers</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">answers</span><span class="p">),</span>
+                                        <span class="n">answer_status</span><span class="o">=</span><span class="n">answer_status</span><span class="p">,</span>
+                                        <span class="n">views</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">views</span><span class="p">),</span>
+                                        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+                                        <span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span>
+                                        <span class="n">user_url</span><span class="o">=</span><span class="n">user_url</span><span class="p">,</span>
+                                        <span class="n">modus</span><span class="o">=</span><span class="n">modus</span><span class="p">,</span>
+                                        <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span>
+                                       <span class="p">)</span>
+
+
+                <span class="n">res</span> <span class="o">=</span> <span class="n">ExtractResult</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                    <span class="n">step_label</span> <span class="o">=</span> <span class="n">step_label</span><span class="p">,</span>
+                                    <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                    <span class="n">post_id</span><span class="o">=</span><span class="n">post_id</span><span class="p">,</span>
+                                    <span class="n">exit_code</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                    <span class="n">exit_message</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                    <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span>
+                                    <span class="p">)</span>
+                <span class="n">res_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">ExtractFullResult</span><span class="p">(</span><span class="n">extract_result</span><span class="o">=</span><span class="n">res</span><span class="p">,</span>
+                                                  <span class="n">extract_data</span><span class="o">=</span><span class="n">res_data</span>
+                                                  <span class="p">)</span>
+                                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error when extracting post-id=</span><span class="si">{</span><span class="n">post_id</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                <span class="n">res</span> <span class="o">=</span>  <span class="n">ExtractResult</span><span class="p">(</span>   <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">ord_key</span><span class="o">=</span><span class="n">ord_key</span><span class="p">,</span>
+                                        <span class="n">post_id</span><span class="o">=</span><span class="n">post_id</span><span class="p">,</span>
+                                        <span class="n">exit_code</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                        <span class="n">exit_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span>
+                                        <span class="n">ml_tag</span><span class="o">=</span><span class="n">ml_tag</span>
+                                        <span class="p">)</span>
+                <span class="n">res_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ExtractFullResult</span><span class="p">(</span>   <span class="n">extract_result</span><span class="o">=</span><span class="n">res</span><span class="p">,</span>
+                                                    <span class="n">extract_data</span><span class="o">=</span><span class="kc">None</span>
+                                                <span class="p">)</span>
+                               <span class="p">)</span>
+
+
+
+    <span class="k">return</span> <span class="n">res_lst</span></div>
+
+<div class="viewcode-block" id="get_summary"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extract_posts.get_summary">[docs]</a><span class="k">def</span> <span class="nf">get_summary</span><span class="p">(</span><span class="n">res_lst</span><span class="p">,</span> <span class="n">sub_field_name</span><span class="p">):</span>
+    <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">res_dict</span><span class="p">[</span><span class="s1">&#39;total&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_lst</span><span class="p">)</span>
+    <span class="n">res_dict</span><span class="p">[</span><span class="s1">&#39;successfull&#39;</span><span class="p">]</span> <span class="o">=</span><span class="nb">len</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res_lst</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sub_field_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">exit_code</span><span class="o">==</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">res_dict</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1">#logging.basicConfig(level=logging.INFO)</span>
+    <span class="c1">#config_yml_file = os.path.abspath(os.path.join(os.path.dirname(__file__), &#39;config.yml&#39;))</span>
+
+    <span class="n">step</span> <span class="o">=</span> <span class="s1">&#39;#1&#39;</span>
+    <span class="n">step_label</span> <span class="o">=</span> <span class="s1">&#39;test_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+
+    <span class="n">deps</span> <span class="o">=</span>  <span class="n">prod_db_deps_container</span><span class="p">()</span>
+    <span class="n">get_session</span> <span class="o">=</span> <span class="n">deps</span><span class="o">.</span><span class="n">get_session</span>
+
+    <span class="n">prod_container</span> <span class="o">=</span> <span class="n">extr_post_deps</span><span class="o">.</span><span class="n">Prod_container</span><span class="p">()</span>
+    <span class="n">prod_container</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;logger&#39;</span><span class="p">:</span> <span class="n">deps</span><span class="o">.</span><span class="n">script_logger</span><span class="p">,</span>
+                                     <span class="s1">&#39;stack_exchange_ws&#39;</span><span class="p">:</span> <span class="s1">&#39;stackoverflow&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;user_agent&#39;</span><span class="p">:</span> <span class="s1">&#39;Software Engineering Research@University of St.Gallen&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;from_email&#39;</span><span class="p">:</span> <span class="s1">&#39;Holger.Bernigau@gmx.de&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;requ_delay&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+                                     <span class="s1">&#39;recovery_timeout&#39;</span><span class="p">:</span> <span class="mi">500</span>
+                                     <span class="p">})</span>
+    <span class="n">downloader</span><span class="o">=</span><span class="n">prod_container</span><span class="o">.</span><span class="n">page_downloader</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">=</span><span class="n">prod_container</span><span class="o">.</span><span class="n">prod_logger</span><span class="p">()</span>
+
+    <span class="c1"># tst_outp_handler = tst_container.tst_handler()</span>
+    <span class="c1"># tst_outp_handler.reset_loglist()</span>
+    <span class="n">topic</span><span class="o">=</span><span class="s1">&#39;anemic-domain-model&#39;</span>
+    <span class="n">nr_pages</span> <span class="o">=</span> <span class="n">extract_nr_pages</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span> <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span> <span class="n">topic</span><span class="o">=</span><span class="n">topic</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Number of pages: </span><span class="si">{</span><span class="n">nr_pages</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">ord_key_generator</span><span class="o">=</span><span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_pages</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Extracting page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">dwnl_page_res</span><span class="o">=</span><span class="n">download_page</span><span class="p">(</span>
+                                <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span>
+                                <span class="n">topic</span><span class="o">=</span><span class="n">topic</span><span class="p">,</span>
+                                <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
+                                <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                <span class="n">ord_key</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                                <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of download for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">dwnl_page_res</span><span class="o">.</span><span class="n">dwnl_page_result</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">extr_pages_info</span><span class="o">=</span><span class="n">extract_meta</span><span class="p">(</span>   <span class="n">dwnl_page_res</span><span class="o">.</span><span class="n">raw_page_content</span><span class="p">,</span>
+                                        <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
+                                        <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">ord_key_generator</span><span class="o">=</span><span class="n">ord_key_generator</span><span class="p">,</span>
+                                        <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span>
+                     <span class="p">)</span>
+        <span class="n">extr_sum</span> <span class="o">=</span> <span class="n">WorkerSummaryReport</span><span class="o">.</span><span class="n">from_result_list</span><span class="p">(</span><span class="n">extr_pages_info</span><span class="p">,</span> <span class="n">attr_name</span><span class="o">=</span><span class="s1">&#39;extract_result&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of extraction of post meta information for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">extr_sum</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+        <span class="n">dwnl_res_lst</span> <span class="o">=</span> <span class="p">[</span><span class="n">download_post</span><span class="p">(</span>  <span class="n">downloader</span><span class="o">=</span><span class="n">downloader</span><span class="p">,</span>
+                                        <span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span>
+                                        <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                                        <span class="n">post_id</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">post_id</span><span class="p">,</span>
+                                        <span class="n">ord_key</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">ord_key</span><span class="p">,</span>
+                                        <span class="n">ml_tag</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">ml_tag</span><span class="p">,</span>
+                                        <span class="n">modus</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">extr_pages_info</span> <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">extract_result</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">==</span> <span class="mi">0</span>
+                        <span class="p">]</span>
+        <span class="n">dwnl_sum</span> <span class="o">=</span>  <span class="n">WorkerSummaryReport</span><span class="o">.</span><span class="n">from_result_list</span><span class="p">(</span><span class="n">dwnl_res_lst</span><span class="p">,</span> <span class="n">attr_name</span><span class="o">=</span><span class="s1">&#39;dwnl_post_result&#39;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Result of downloads of posts for page </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">: &quot;</span><span class="si">{</span><span class="n">dwnl_sum</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, HBernigau.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

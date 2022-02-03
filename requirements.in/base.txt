@@ -1,0 +1,14 @@
+click
+pandas
+marshmallow-dataclass
+dependency_injector
+robotspy
+circuitbreaker
+beautifulsoup4
+retry
+pytest
+werkzeug
+dotted_dict
+gensim
+nltk
+langdetect

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>so_ana_management.management_utils &mdash; SO_analysis 1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> SO_analysis
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/how_to_run.html">How to run stack overflow analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/API_doc.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SO_analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>so_ana_management.management_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for so_ana_management.management_utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">contains several utilities for flow management including data types</span>
+
+<span class="sd">Author: `HBernigau &lt;https://github.com/HBernigau&gt;`_</span>
+<span class="sd">Date: 01.2022</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span>  <span class="nn">logging.config</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">marshmallow.validate</span>
+<span class="kn">import</span> <span class="nn">so_ana_util.so_ana_json</span> <span class="k">as</span> <span class="nn">so_ana_json</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">elasticsearch</span> <span class="kn">import</span> <span class="n">helpers</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_util</span>
+
+<span class="n">UDF</span> <span class="o">=</span> <span class="s1">&#39;#undefined#&#39;</span>
+<span class="n">REQU_TYPE_LST</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;calculate_new&#39;</span><span class="p">,</span> <span class="s1">&#39;use_old&#39;</span><span class="p">]</span>
+<span class="n">STEPS_DICT</span><span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;#1&#39;</span><span class="p">:</span> <span class="s1">&#39;extract_posts&#39;</span><span class="p">,</span> <span class="s1">&#39;#2&#39;</span><span class="p">:</span> <span class="s1">&#39;download_posts&#39;</span><span class="p">,</span> <span class="s1">&#39;#3&#39;</span><span class="p">:</span> <span class="s1">&#39;extract_post_info&#39;</span><span class="p">,</span> <span class="s1">&#39;#4&#39;</span><span class="p">:</span> <span class="s1">&#39;preprocess_posts&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;#5&#39;</span><span class="p">:</span> <span class="s1">&#39;vectorize_posts&#39;</span><span class="p">,</span> <span class="s1">&#39;#6&#39;</span><span class="p">:</span> <span class="s1">&#39;integrate_2_ML_model&#39;</span><span class="p">,</span> <span class="s1">&#39;#7&#39;</span><span class="p">:</span> <span class="s1">&#39;report_results&#39;</span><span class="p">,</span> <span class="s1">&#39;#8&#39;</span><span class="p">:</span> <span class="s1">&#39;finish_run&#39;</span><span class="p">}</span>
+<span class="n">DATA_TYPE_LST</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;pg&#39;</span><span class="p">,</span> <span class="s1">&#39;es&#39;</span><span class="p">]</span>
+<span class="n">ML_TAGS</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s1">&#39;train&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span> <span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s1">&#39;validation&#39;</span><span class="p">}</span>
+
+
+<span class="c1">#define Exceptions...</span>
+
+
+<span class="c1">#define registry for data classes</span>
+<div class="viewcode-block" id="DCRegistry"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.DCRegistry">[docs]</a><span class="k">class</span> <span class="nc">DCRegistry</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_members</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="DCRegistry.register"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.DCRegistry.register">[docs]</a>    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_members</span><span class="p">[</span><span class="n">DC</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">DC</span></div>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">DC</span></div>
+
+
+<span class="n">with_register</span> <span class="o">=</span> <span class="n">DCRegistry</span><span class="p">()</span>
+
+<div class="viewcode-block" id="get_full_storage_path"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.get_full_storage_path">[docs]</a><span class="k">def</span> <span class="nf">get_full_storage_path</span><span class="p">(</span><span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">so_ana_util</span><span class="o">.</span><span class="n">PROJ_OUTP_PATH</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OptionsBase"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.OptionsBase">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">OptionsBase</span><span class="p">:</span>
+    <span class="n">opts_label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()))</span>
+    <span class="n">opts_description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TokenizationOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TokenizationOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">TokenizationOptions</span><span class="p">(</span><span class="n">OptionsBase</span><span class="p">):</span>
+    <span class="n">base_content</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+    <span class="n">to_lower_case</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">use_lemmatizer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;wordnet&#39;</span><span class="p">)</span>
+    <span class="n">filter_gensim_stopwords</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">own_stopword_lst</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="VectorizationOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.VectorizationOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">VectorizationOptions</span><span class="p">(</span><span class="n">OptionsBase</span><span class="p">):</span>
+    <span class="n">storage_location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">filter_no_below</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">filter_no_above</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">nr_grams</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="VectorizationOptions.get_storage_path"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.VectorizationOptions.get_storage_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_storage_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_full_storage_path</span><span class="p">(</span><span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">storage_location</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="MLOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.MLOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">MLOptions</span><span class="p">(</span><span class="n">OptionsBase</span><span class="p">):</span>
+    <span class="n">storage_location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">test_fraction</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>
+    <span class="n">val_fraction</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>
+    <span class="n">num_topics</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+    <span class="n">nr_passes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MLOptions.get_storage_path"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.MLOptions.get_storage_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_storage_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_full_storage_path</span><span class="p">(</span><span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">storage_location</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="ReportingOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ReportingOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">ReportingOptions</span><span class="p">(</span><span class="n">OptionsBase</span><span class="p">):</span>
+    <span class="n">wc_base_location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">LDAvis_base_location</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReportingOptions.get_wc_base_path"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ReportingOptions.get_wc_base_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_wc_base_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_full_storage_path</span><span class="p">(</span><span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wc_base_location</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ReportingOptions.get_LDAvis_base_path"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ReportingOptions.get_LDAvis_base_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_LDAvis_base_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_full_storage_path</span><span class="p">(</span><span class="n">flow_id</span><span class="p">,</span> <span class="n">base_value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">LDAvis_base_location</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="DownloadOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.DownloadOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">DownloadOptions</span><span class="p">(</span><span class="n">OptionsBase</span><span class="p">):</span>
+    <span class="n">download_rate_delay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">error_retry_delay</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">400.0</span>
+    <span class="n">batch_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">max_dwnl_errors_per_batch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="StepDescr"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.StepDescr">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">StepDescr</span><span class="p">:</span>
+    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">metadata</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">validate</span><span class="o">=</span><span class="n">marshmallow</span><span class="o">.</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">STEPS_DICT</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;#8&#39;</span><span class="p">])</span>
+                                   <span class="p">)</span>
+                      <span class="p">)</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()))</span></div>
+
+<div class="viewcode-block" id="StepSuccessReportBase"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.StepSuccessReportBase">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">StepSuccessReportBase</span><span class="p">(</span><span class="n">StepDescr</span><span class="p">):</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># 0:successfull</span>
+    <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PageCountReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PageCountReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">PageCountReport</span><span class="p">(</span><span class="n">StepSuccessReportBase</span><span class="p">):</span>
+    <span class="n">page_number_total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">divisor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SkipPageCountReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.SkipPageCountReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SkipPageCountReport</span><span class="p">(</span><span class="n">PageCountReport</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="PageDownloadsSuccessReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PageDownloadsSuccessReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">PageDownloadsSuccessReport</span><span class="p">(</span><span class="n">StepSuccessReportBase</span><span class="p">):</span>
+    <span class="n">nr_success</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nr_failure</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">divisor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nr_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_success</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_failure</span>
+
+<div class="viewcode-block" id="PageDownloadsSuccessReport.extr_post_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PageDownloadsSuccessReport.extr_post_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">extr_post_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
+        <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select post_id, ord_key, ml_tag from so_ana_doc_worker.page_meta_info &#39;</span> \
+             <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1">&#39;</span>
+
+        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                       <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                       <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
+                                       <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
+                                       <span class="p">})</span>
+
+        <span class="k">for</span> <span class="n">res_row</span> <span class="ow">in</span> <span class="n">res_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">res_row</span></div></div>
+
+<div class="viewcode-block" id="SkipPageDownloadsSuccessReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.SkipPageDownloadsSuccessReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SkipPageDownloadsSuccessReport</span><span class="p">(</span><span class="n">PageDownloadsSuccessReport</span><span class="p">):</span>
+	<span class="k">pass</span></div>
+
+<div class="viewcode-block" id="PostDownloadsSuccessReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PostDownloadsSuccessReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">PostDownloadsSuccessReport</span><span class="p">(</span><span class="n">StepSuccessReportBase</span><span class="p">):</span>
+    <span class="n">nr_success</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nr_failure</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">nr_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_success</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_failure</span></div>
+
+<div class="viewcode-block" id="SkipPostDownloadsSuccessReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.SkipPostDownloadsSuccessReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SkipPostDownloadsSuccessReport</span><span class="p">(</span><span class="n">PostDownloadsSuccessReport</span><span class="p">):</span>
+	<span class="k">pass</span></div>
+	
+<div class="viewcode-block" id="StepFinishedReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.StepFinishedReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">StepFinishedReport</span><span class="p">(</span><span class="n">StepSuccessReportBase</span><span class="p">):</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BatchResultBase"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResultBase">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">BatchResultBase</span><span class="p">(</span><span class="n">StepDescr</span><span class="p">):</span>
+    <span class="n">divisor</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">result_class_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">data_class_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BatchResultBase.set_result_class_name"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResultBase.set_result_class_name">[docs]</a>    <span class="k">def</span> <span class="nf">set_result_class_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span></div>
+
+<div class="viewcode-block" id="BatchResultBase.result_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResultBase.result_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">result_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
+        <span class="n">qu</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select post_id, ord_key, ml_tag from so_ana_management.post_results &#39;</span> \
+             <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and result_class_name=</span><span class="si">%(result_class_name)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and exit_code = 0&#39;</span>
+
+        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                       <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                       <span class="s1">&#39;result_class_name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name</span><span class="p">,</span>
+                                       <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
+                                       <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
+                                       <span class="p">})</span>
+
+        <span class="k">for</span> <span class="n">res_row</span> <span class="ow">in</span> <span class="n">res_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">res_row</span></div></div>
+
+<div class="viewcode-block" id="BatchResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResult">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">BatchResult</span><span class="p">(</span><span class="n">BatchResultBase</span><span class="p">):</span>
+    <span class="n">nr_success</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nr_failure</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BatchResultDoc"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResultDoc">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">BatchResultDoc</span><span class="p">(</span><span class="n">BatchResultBase</span><span class="p">):</span>
+    <span class="n">file_keys</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">base_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">full_path_to_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_path</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_keys</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+<div class="viewcode-block" id="TransformStepSummaryReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TransformStepSummaryReport">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">TransformStepSummaryReport</span><span class="p">(</span><span class="n">StepDescr</span><span class="p">):</span>
+    <span class="n">nr_success</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">nr_failure</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">result_class_name_set</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">data_class_name_set</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_failure</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_success</span>
+
+<div class="viewcode-block" id="TransformStepSummaryReport.from_batch_result_list"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TransformStepSummaryReport.from_batch_result_list">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_batch_result_list</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">step_info</span><span class="p">,</span> <span class="n">batchres_lst</span><span class="p">):</span>
+        <span class="n">nr_success</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">item</span><span class="o">.</span><span class="n">nr_success</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batchres_lst</span><span class="p">])</span>
+        <span class="n">nr_failure</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">item</span><span class="o">.</span><span class="n">nr_failure</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batchres_lst</span><span class="p">])</span>
+        <span class="n">exit_code</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">nr_failure</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">exit_code</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">nr_failure</span><span class="si">}</span><span class="s1"> of </span><span class="si">{</span><span class="n">nr_failure</span><span class="o">+</span><span class="n">nr_success</span><span class="si">}</span><span class="s1"> tasks failed.&#39;</span>
+        <span class="n">result_class_name_set</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">item</span><span class="o">.</span><span class="n">result_class_name</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batchres_lst</span><span class="p">]))</span>
+        <span class="n">data_class_name_set</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">item</span><span class="o">.</span><span class="n">data_class_name</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batchres_lst</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step_info</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                   <span class="n">label</span><span class="o">=</span><span class="n">step_info</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                   <span class="n">nr_success</span><span class="o">=</span><span class="n">nr_success</span><span class="p">,</span>
+                   <span class="n">nr_failure</span><span class="o">=</span><span class="n">nr_failure</span><span class="p">,</span>
+                   <span class="n">exit_code</span><span class="o">=</span><span class="n">exit_code</span><span class="p">,</span>
+                   <span class="n">msg</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span>
+                   <span class="n">result_class_name_set</span><span class="o">=</span><span class="n">result_class_name_set</span><span class="p">,</span>
+                   <span class="n">data_class_name_set</span><span class="o">=</span><span class="n">data_class_name_set</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TransformStepSummaryReport.es_idx_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TransformStepSummaryReport.es_idx_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">es_idx_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">es</span><span class="p">,</span> <span class="n">ret_field_src_list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">training_data_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;query&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;bool&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;filter&#39;</span><span class="p">:</span> <span class="p">[</span> <span class="p">{</span><span class="s1">&#39;term&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">}},</span>
+                                                <span class="p">{</span><span class="s1">&#39;term&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">}}</span>
+                                                <span class="p">]</span>
+                                    <span class="p">}</span>
+                            <span class="p">}</span>
+                <span class="p">}</span>
+        <span class="k">if</span> <span class="n">training_data_only</span><span class="p">:</span>
+            <span class="n">query</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">][</span><span class="s1">&#39;bool&#39;</span><span class="p">][</span><span class="s1">&#39;filter&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;term&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;ml_tag&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}})</span>
+        <span class="k">if</span> <span class="n">ret_field_src_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">query</span><span class="p">[</span><span class="s1">&#39;_source&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ret_field_src_list</span>
+
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span>
+            <span class="n">client</span><span class="o">=</span><span class="n">es</span><span class="p">,</span>
+            <span class="n">index</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;idx_&#39;</span> <span class="o">+</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_class_name_set</span><span class="p">]),</span>
+            <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
+            <span class="n">scroll</span><span class="o">=</span><span class="s1">&#39;120m&#39;</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">clear_scroll</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">es_data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">resp</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">i</span><span class="p">,</span> <span class="n">es_data</span></div>
+
+<div class="viewcode-block" id="TransformStepSummaryReport.pg_result_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TransformStepSummaryReport.pg_result_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">pg_result_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">training_data_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">qu</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select step, step_label, post_id, ord_key, ml_tag from so_ana_management.post_results &#39;</span> \
+             <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and result_class_name=</span><span class="si">%(result_class_name)s</span><span class="s1"> &#39;</span> \
+             <span class="s1">&#39;and exit_code = 0&#39;</span>
+        <span class="n">param_lst</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">training_data_only</span><span class="p">:</span>
+            <span class="n">qu</span> <span class="o">+=</span> <span class="s1">&#39; and ml_tag = 0&#39;</span>
+        <span class="k">for</span> <span class="n">res_class_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name_set</span><span class="p">:</span>
+            <span class="n">param_lst</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>  <span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                <span class="s1">&#39;result_class_name&#39;</span><span class="p">:</span> <span class="n">res_class_name</span>
+                             <span class="p">}</span>
+                            <span class="p">)</span>
+        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="n">param_lst</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">res_row</span> <span class="ow">in</span> <span class="n">res_cursor</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">res_row</span></div></div>
+
+<div class="viewcode-block" id="ArtefactShort"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ArtefactShort">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ArtefactShort</span><span class="p">:</span>
+    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">artefact_key</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">artefact_value</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="Artefact"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.Artefact">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Artefact</span><span class="p">(</span><span class="n">ArtefactShort</span><span class="p">):</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">timestamp</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_slug</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">map_index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_loop_count</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_run_count</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">thread</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">threading</span><span class="o">.</span><span class="n">get_ident</span><span class="p">)</span>
+    <span class="n">process</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_part_default_values</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">prefect</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>    <span class="n">modus</span><span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;modus&#39;</span><span class="p">,</span> <span class="s1">&#39;test&#39;</span><span class="p">),</span>
+                        <span class="n">flow_run_id</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">flow_run_id</span><span class="p">,</span>
+                        <span class="n">timestamp</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+                        <span class="n">task_name</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">task_name</span><span class="p">,</span>
+                        <span class="n">task_slug</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">task_slug</span><span class="p">,</span>
+                        <span class="n">task_run_id</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">task_run_id</span><span class="p">,</span>
+                        <span class="n">map_index</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">map_index</span><span class="p">,</span>
+                        <span class="n">task_loop_count</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="s1">&#39;task_loop_count&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                        <span class="n">task_run_count</span><span class="o">=</span><span class="n">prefect</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">task_run_count</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Artefact.save_data"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.Artefact.save_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                  <span class="n">session</span><span class="p">,</span>
+                  <span class="n">serializer</span><span class="p">,</span>
+                  <span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+
+        <span class="n">modified_value</span><span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+        <span class="n">sav_data</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                        <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">,</span>
+                        <span class="n">artefact_key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                        <span class="n">artefact_value</span> <span class="o">=</span> <span class="n">modified_value</span><span class="p">,</span>
+                        <span class="o">**</span><span class="bp">cls</span><span class="o">.</span><span class="n">_part_default_values</span><span class="p">()</span>
+                       <span class="p">)</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sav_data</span><span class="p">)</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">ArtefactShort</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">sav_data</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                             <span class="n">step_label</span> <span class="o">=</span> <span class="n">sav_data</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                             <span class="n">artefact_key</span> <span class="o">=</span> <span class="n">sav_data</span><span class="o">.</span><span class="n">artefact_key</span><span class="p">,</span>
+                             <span class="n">artefact_value</span> <span class="o">=</span> <span class="n">sav_data</span><span class="o">.</span><span class="n">artefact_value</span>
+                             <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Artefact.get_data"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.Artefact.get_data">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span>   <span class="bp">cls</span><span class="p">,</span>
+                    <span class="n">session</span><span class="p">,</span>
+                    <span class="n">serializer</span><span class="p">,</span>
+                    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                    <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="n">step</span><span class="p">,</span>
+                                <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="n">step_label</span><span class="p">,</span>
+                                <span class="s1">&#39;artefact_key&#39;</span><span class="p">:</span> <span class="n">key</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="n">ArtefactShort</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">obj</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                             <span class="n">step_label</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                             <span class="n">artefact_key</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">artefact_key</span><span class="p">,</span>
+                             <span class="n">artefact_value</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">artefact_value</span>
+                             <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Artefact.all_artefacts_by_step"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.Artefact.all_artefacts_by_step">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">all_artefacts_by_step</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                              <span class="n">session</span><span class="p">,</span>
+                              <span class="n">serializer</span><span class="p">,</span>
+                              <span class="n">step</span><span class="p">,</span>
+                              <span class="n">step_label</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span> <span class="n">step_label</span><span class="o">=</span><span class="n">step_label</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">ArtefactShort</span><span class="p">(</span><span class="n">step</span><span class="o">=</span><span class="n">item</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                             <span class="n">step_label</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">step_label</span><span class="p">,</span>
+                             <span class="n">artefact_key</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">artefact_key</span><span class="p">,</span>
+                             <span class="n">artefact_value</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">artefact_value</span>
+                             <span class="p">)</span>
+               <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">res</span></div></div>
+
+<div class="viewcode-block" id="StepRequest"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.StepRequest">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">StepRequest</span><span class="p">(</span><span class="n">StepDescr</span><span class="p">):</span>
+    <span class="n">request_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">REQU_TYPE_LST</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">metadata</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>    <span class="n">validate</span><span class="o">=</span><span class="n">marshmallow</span><span class="o">.</span><span class="n">validate</span><span class="o">.</span><span class="n">OneOf</span><span class="p">(</span><span class="n">REQU_TYPE_LST</span><span class="p">)</span>
+                                   <span class="p">)</span>
+                      <span class="p">)</span>
+    <span class="n">artefact_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ArtefactShort</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StepRequest.set_artefacts_from_db"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.StepRequest.set_artefacts_from_db">[docs]</a>    <span class="k">def</span> <span class="nf">set_artefacts_from_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">serializer</span><span class="p">):</span>
+        <span class="n">art_lst</span> <span class="o">=</span> <span class="n">Artefact</span><span class="o">.</span><span class="n">all_artefacts_by_step</span><span class="p">(</span>   <span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span>
+                                                    <span class="n">serializer</span><span class="o">=</span><span class="n">serializer</span><span class="p">,</span>
+                                                    <span class="n">step</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                                    <span class="n">step_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span>
+                                              <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">artefact_list</span> <span class="o">=</span> <span class="n">art_lst</span></div></div>
+
+
+
+<div class="viewcode-block" id="FlowOptions"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.FlowOptions">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">FlowOptions</span><span class="p">:</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">stack_exchange_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">download_opts</span><span class="p">:</span> <span class="n">DownloadOptions</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">DownloadOptions</span><span class="p">())</span>
+    <span class="n">pre_proc_opts</span><span class="p">:</span> <span class="n">TokenizationOptions</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">TokenizationOptions</span><span class="p">())</span>
+    <span class="n">vect_opts</span><span class="p">:</span> <span class="n">VectorizationOptions</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">VectorizationOptions</span><span class="p">())</span>
+    <span class="n">ml_opts</span><span class="p">:</span> <span class="n">MLOptions</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">MLOptions</span><span class="p">())</span>
+    <span class="n">rep_opts</span><span class="p">:</span> <span class="n">ReportingOptions</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ReportingOptions</span><span class="p">())</span>
+    <span class="n">preproc_batch_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">use_step</span><span class="p">:</span> <span class="n">StepDescr</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LocationKey"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.LocationKey">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">LocationKey</span><span class="p">:</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">task_slug</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">map_index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_loop_count</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_run_count</span><span class="p">:</span> <span class="nb">int</span></div>
+
+<div class="viewcode-block" id="ExtendedKey"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ExtendedKey">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ExtendedKey</span><span class="p">(</span><span class="n">LocationKey</span><span class="p">):</span>
+    <span class="n">result_as_json</span><span class="p">:</span> <span class="n">Any</span></div>
+
+<div class="viewcode-block" id="FullResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.FullResult">[docs]</a><span class="nd">@with_register</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">FullResult</span><span class="p">(</span><span class="n">ExtendedKey</span><span class="p">):</span>
+    <span class="n">flow_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_full_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">pid</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">)</span>
+    <span class="n">thread</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">threading</span><span class="o">.</span><span class="n">get_ident</span><span class="p">)</span>
+    <span class="n">timestamp</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="s1">&#39;test&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="JobOverview"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.JobOverview">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">JobOverview</span><span class="p">:</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">stack_exchange_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">download_opts</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">pre_proc_opts</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">vect_opts</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">ml_opts</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">rep_opts</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">use_step_step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">use_step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">started_at_timest</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">finished_at_timst</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">exit_msg</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
+    <span class="n">flow_opts</span><span class="p">:</span> <span class="n">FlowOptions</span>
+    <span class="n">step_2_info</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">StepRequest</span><span class="p">]</span>
+    <span class="n">user_agent</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">from_email</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="JobStepOverview"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.JobStepOverview">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">JobStepOverview</span><span class="p">:</span>
+    <span class="n">flow_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">placed_at_timest</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">started_at_timest</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">finished_at_timest</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">result</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">exit_msg</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">prev_step_lbls</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;test&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResultBase"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.ResultBase">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ResultBase</span><span class="p">:</span>
+    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ord_key</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">result_class_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">exit_msg</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span></div>
+
+<div class="viewcode-block" id="PageResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PageResult">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">PageResult</span><span class="p">(</span><span class="n">ResultBase</span><span class="p">):</span>
+    <span class="n">page_nr</span><span class="p">:</span> <span class="nb">int</span></div>
+
+<div class="viewcode-block" id="PostResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PostResult">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">PostResult</span><span class="p">(</span><span class="n">ResultBase</span><span class="p">):</span>
+    <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">ml_tag</span><span class="p">:</span> <span class="nb">int</span></div>
+
+<div class="viewcode-block" id="TopicDistribution"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.TopicDistribution">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">TopicDistribution</span><span class="p">:</span>
+    <span class="n">step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ord_key</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">for_step</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">for_step_label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">topic_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">topic_weight</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">flow_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">timestamp</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">task_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_slug</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">task_run_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">map_index</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_loop_count</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">task_run_count</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">thread</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">process</span><span class="p">:</span> <span class="nb">int</span></div>
+
+<div class="viewcode-block" id="get_proj_serializer"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.get_proj_serializer">[docs]</a><span class="k">def</span> <span class="nf">get_proj_serializer</span><span class="p">():</span>
+    <span class="n">registry</span> <span class="o">=</span> <span class="n">so_ana_json</span><span class="o">.</span><span class="n">TypedJsonSerializer</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">with_register</span><span class="o">.</span><span class="n">_members</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">registry</span><span class="o">.</span><span class="n">register_schema</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">registry</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                   <span class="s1">&#39;formatters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s1">&#39;</span><span class="si">%(name)s</span><span class="s1">: </span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">}</span>
+
+                                <span class="p">},</span>
+                   <span class="s1">&#39;handlers&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;console&#39;</span><span class="p">:</span>
+                                    <span class="p">{</span><span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="s1">&#39;logging.StreamHandler&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;formatter&#39;</span><span class="p">:</span> <span class="s1">&#39;std&#39;</span>
+                                     <span class="p">}</span>
+                                <span class="p">},</span>
+                   <span class="s1">&#39;root&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;level&#39;</span> <span class="p">:</span> <span class="s1">&#39;DEBUG&#39;</span><span class="p">,</span>
+                            <span class="s1">&#39;propagate&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="s1">&#39;handlers&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;console&#39;</span><span class="p">]</span>
+                            <span class="p">}</span>
+
+                   <span class="p">}</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">dictConfig</span><span class="p">(</span><span class="n">config_dict</span><span class="p">)</span>
+    <span class="n">serializer</span> <span class="o">=</span> <span class="n">get_proj_serializer</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">_registry</span><span class="p">)</span>
+
+    <span class="nd">@dataclass</span>
+    <span class="k">class</span> <span class="nc">SampleClass</span><span class="p">:</span>
+        <span class="n">int_field</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="n">str_field</span><span class="p">:</span> <span class="nb">str</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">SampleClass</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">SampleClass</span><span class="o">.</span><span class="n">__dataclass_fields__</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, HBernigau.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

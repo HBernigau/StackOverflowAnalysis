@@ -1,0 +1,1 @@
+start cmd /k "TITLE prefect server & call activate_venv.bat & prefect server start --postgres-url postgresql://admin:admin@so_ana_postgres:5432/so_ana_prefect"

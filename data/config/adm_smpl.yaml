@@ -1,0 +1,44 @@
+description: Flows for anemic domain models (for testing and demos (only about 68 entries)
+stack_exchange_type: stackoverflow
+topic: anemic-domain-model
+download_opts: 
+    opts_label: dwnl_adm_sample
+    opts_description: download of sample data
+    download_rate_delay: 2.0
+    error_retry_delay: 400.0
+    batch_count: 1
+
+pre_proc_opts:
+    opts_label: preproc_adm_sample
+    opts_description: standard implementation of stemming
+    base_content: all
+    to_lower_case: True
+    use_lemmatizer: wordnet
+    filter_gensim_stopwords: True
+    own_stopword_lst: []
+
+vect_opts:
+    opts_label: vect_adm_sample
+    opts_description: standard implementation of vectorization
+    storage_location: dict
+    filter_no_below: 1
+    filter_no_above: 1.0
+    nr_grams: 3
+    
+ml_opts:
+    opts_label: ml_opts_adm_sample
+    opts_description: standard implementation of ml model integration
+    test_fraction: 0.15
+    val_fraction: 0.15
+    storage_location: ML_OPTS
+    num_topics: 5
+    nr_passes: 50
+    
+rep_opts:
+    opts_label: rep_adm_sample
+    opts_description: LDA vis and word cloud
+    wc_base_location: reports
+    LDAvis_base_location: reports
+    
+preproc_batch_count: 10
+use_step: null
