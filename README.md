@@ -34,14 +34,14 @@ This software project was part of my MBA master thesis for my
 program of the [Technical University of Munich (Germany)](https://www.tum.de/) and the [University of St. Gallen (Switzerland)](https://www.es.unisg.ch/en/university-st-gallen-hsg)
 with an exchange module in [Tsinghua University, Beijing](https://www.tsinghua.edu.cn/en/).
 
-Many thanks at to my Supervisor, [Prof. Barbara Weber](https://www.alexandria.unisg.ch/persons/8178),
+Many thanks at this point to my Supervisor, [Prof. Barbara Weber](https://www.alexandria.unisg.ch/persons/8178),
 chair of [Software Systems Programming and Development](https://ics.unisg.ch/chair-se-weber) of 
 the University of St. Gallen!
 
 My participation in that program was financed by my Employer, [d-fine GmbH](https://www.d-fine.com/),
-what I am very thankful for.
+what I am also very thankful for.
 
-I am also very thankful to my wife and to my son for being very supportive in that rather 
+I am also very thankful to my *wife and to my nearly two years old son* for being very supportive in that rather 
 stressful period of time consisting basically of working,
 coding, fighting with the underlying technologies, 
 reading articles and writing my Mater thesis...
