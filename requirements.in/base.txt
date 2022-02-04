@@ -12,3 +12,4 @@ dotted_dict
 gensim
 nltk
 langdetect
+pyyaml

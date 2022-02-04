@@ -1,0 +1,4 @@
+* text=auto
+
+# specify linefeed information for sh script for init script
+Docker/directories/init/tear_up.sh text eol=lf
