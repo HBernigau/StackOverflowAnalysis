@@ -3,6 +3,24 @@ User guide
 
 t.b.d.
 
+Monitoring
+----------
+
+PG admin
+********
+
+t.b.d.
+
+DASK
+****
+
+t.b.d.
+
+Prefect
+*******
+
+t.b.d.
+
 Flow configuration
 ------------------
 

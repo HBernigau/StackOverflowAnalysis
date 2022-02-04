@@ -10,6 +10,18 @@ As a first step clone the repository:
 
    cd <put-your-target-folder-here>
    git clone https://github.com/HBernigau/StackOverflowAnalysis.git
+   
+After executing this command the folder *StackOverflowAnalysis* will be downloaded into the target folder.
+change into that folder by typing
+
+.. code-block:: bat
+
+   cd StackOverflowAnalysis
+
+.. warning::
+
+   All subsequent steps assume that you are within the **package root**, i.e. the folder *<your_target_folder>/StackOverflowAnalysis*.
+
 
 Build the virtual environment
 -----------------------------
@@ -18,47 +30,90 @@ The application has been tested using *Python 3.8.6* on a
 Windows computer with *Windows 10 Enterprise*.
 
 If you want to use the same Python version, we recommend
-using `pyenv <https://github.com/pyenv/pyenv>`_ which allows
-management of multiple Python versions on the same machine.
+using `pyenv <https://github.com/pyenv/pyenv>`_ as well. *pyenv* allows the
+management of multiple Python versions on the same machine. You can install a new python version (here: 3.8.6) by using the command
 
-For dependency management the current application uses
-`pip-tools <https://github.com/jazzband/pip-tools>`_ ,
-which can be considered as a best-practice for dependency
-management in Python. In order to use it, install it using pip:
+.. code-block:: bat
+
+   pyenv install 3.8.6
+
+If you are in the application's root folder, if you are using *pyenv* and if you installed Python 3.8.6, then the python version is automtically
+switched to 3.8.6 (this is what the file *.python-version* is good for). You can check this by typing
+
+.. code-block:: bat
+
+   pyenv version
+
+In order to build a new virtual environment in subfolder *venv* type:
+
+.. code-block:: bat
+
+   python -m venv venv
+   
+Activate that environment by typing
+
+.. code-block:: bat
+
+   activate_venv.bat
+   
+.. warning::
+   
+   For the following commands we assume that the virtual environment has been activated.
+
+For dependency management the current application uses `pip-tools <https://github.com/jazzband/pip-tools>`_ ,
+which can be considered as a best-practice for dependency management in Python. Install it into your virtual environment using pip:
 
 .. code-block:: bat
 
    python -m pip install pip-tools
 
-.. note::
-   when writing this guide, there was
-   an issue regarding compatibility of pip and
-   pip-utils, which can be fixed by using a pip version
-   bellow 22.0 (see `issue 1558 on pip-tools on Github <https://github.com/jazzband/pip-tools/issues/1558>`_ ).
 
-Now change to the applications root folder and
-build the virtual environment by calling
+.. note::
+
+   If you encounter a permission error like the following:
+
+   .. image:: img/Screenshot_permission_error.png
+
+   Please switch to the user's *Appdata/Local/Temp* folder in Windows explorer, right click on that folder and chose the menue item *"Properties"*
+   from the context menue. In panel *General* uncheck the attribute *read-only* and in panel *Security* check the permissions and 
+   readjust if appropriate. Then re-run the previous command.
+
+.. note::
+
+   When writing this guide, there exists an open issue regarding compatibility of pip and
+   pip-tools (see `issue 1558 for pip-tools on Github <https://github.com/jazzband/pip-tools/issues/1558>`_ ), 
+   which can be fixed temporarily by the following work-around: Use a pip version below 22.0 .
+   
+   The command for installing a specific pip version (21 here) is:
+   
+   .. code-block bat
+   
+      pip install pip==21
+
+
+Now within your activated virtual environment, you can sync the project's requirements file with the virtual environment by typing:
 
 .. code-block:: bat
 
    build_full.bat
 
+
 If you want to re-generate the requirements file
-from first order dependencies (i.e. using the latest
-available library version) call
+from first order dependencies (i.e. you prefer using the latest available versions of all libraries), then
+- before calling the build script, *build_full.bat* - enter the following command:
 
 .. code-block:: bat
 
    compile_full.bat
 
-before calling the build script.
+You can also use the frozen library versions first and update the libraries at any later point in time.
 
 Start Docker containers
 -----------------------
 
 The application uses a `PostgreSQL <https://www.postgresql.org/>`_ data base and an
 `elastic search <https://www.elastic.co/de/elasticsearch/>`_
-data base as backends which ar run in Docker containers.
+data base as backends which are run in Docker containers.
 
 Hence, the application requires installation of
 `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ .
@@ -69,11 +124,16 @@ file from *templates* folder into the root folder and set the
 variable *PGADMIN_DEFAULT_EMAIL* to some email address that
 is then used as login information for
 `PGAdmin <https://www.pgadmin.org/>`_ , a management tool for
-postgresql data bases.
+PostgreSQL data bases.
+
+.. warning::
+   
+   For the following steps we assume that a valid *.env* file is located in the package root.
 
 .. note::
-   you can also change other environment variables,
-   like the password for postgreSQL or various ports.
+
+   You can also change other environment variables,
+   like the password for PostgreSQL or various ports.
    The latter might be necessary, if you should encounter
    any port conflicts for example.
 
@@ -82,10 +142,10 @@ please read the following note:
 
 .. note::
 
-   If you alter postgreSQL connection data, please note the following:
+   If you alter PostgreSQL connection data, please note the following:
 
    One of the Docker containers connects to the
-   postgreSQL data base and builds the latest version
+   PostgreSQL data base and builds the latest version
    of the application's data base using `alembic <https://alembic.sqlalchemy.org/en/latest/>`_ .
    In order to make that work, please also adjust the database
    urls in *./alembic/alembic.ini*, line 38 and in
@@ -134,6 +194,8 @@ In order to run the cluster do the following:
 
 3. Start the prefect client:
 
+.. code-block:: bat
+
    launch_prefect_client.bat
 
 Now you can use the command line application, *so_ana.py*,
@@ -147,10 +209,10 @@ available commands, call:
 .. note::
 
    When configured as described above, prefect does not persist run-time information,
-   i.e. prefect server looses any information about previous runs.
+   i.e. prefect server loses any information about previous runs.
 
    Even though prefect in principle allows providing a storage location for
-   its postgreSQL backend, this is not very help-full under windows, as
+   its PostgreSQL backend, this is not very helpful under windows, as
    assigning windows drives conflicts with Linux user-permission in Windows.
 
    As a work-around you can use Docker managed drives. In order to do that,
