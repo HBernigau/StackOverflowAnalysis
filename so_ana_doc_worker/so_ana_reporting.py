@@ -27,7 +27,7 @@ from collections import defaultdict
 
 import so_ana_management.management_utils as so_ana_mu
 from so_ana_util.data_access import get_doc_iterator
-from sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
+from so_ana_sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
 import so_ana_doc_worker.schemas as so_ana_worker_schemas
 
 import warnings

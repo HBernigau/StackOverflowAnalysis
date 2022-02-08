@@ -11,7 +11,7 @@ from sqlalchemy import MetaData
 import so_ana_doc_worker.schemas as doc_worker_schemas
 import so_ana_management.management_utils as mng_util
 import so_ana_util.common_types as so_ana_common_types
-from sqlalchemy_models.table_defs import tbl_specs
+from so_ana_sqlalchemy_models.table_defs import tbl_specs
 
 
 # mapping the tables

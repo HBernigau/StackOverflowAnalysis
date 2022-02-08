@@ -1,4 +1,4 @@
 * text=auto
 
-# specify linefeed information for sh script for init script
-Docker/directories/init/tear_up.sh text eol=lf
+# specify linefeed information for sh script in Docker directories
+Docker/directories/**.sh text eol=lf

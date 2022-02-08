@@ -9,7 +9,7 @@ Date: 01.2022
 from sqlalchemy import Column, Integer, String, Float, DateTime, create_engine, Date
 from sqlalchemy.dialects.postgresql import JSON, ARRAY, UUID
 
-import sqlalchemy_models.model_base as mb
+import so_ana_sqlalchemy_models.model_base as mb
 
 cntx_lst = ['so_ana_analysis',
             'so_ana_doc_worker',

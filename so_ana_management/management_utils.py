@@ -147,19 +147,33 @@ class PageDownloadsSuccessReport(StepSuccessReportBase):
         return self.nr_success + self.nr_failure
 
     def extr_post_iterator(self, conn):
-        qu = 'select post_id, ord_key, ml_tag from so_ana_doc_worker.page_meta_info ' \
-             'where step=%(step)s ' \
-             'and step_label=%(step_label)s ' \
-             'and MOD(ord_key,%(divisor)s)=%(batch_id)s'
+        # note: in order to avoid (very rare) locking problems: data is copied to a temporary table
+        tmp_table_template = 'tmp_@uuid@'
+        tmp_table_name = tmp_table_template.replace('@uuid@', str(uuid.uuid4())).replace('-', '_')
 
-        res_cursor = conn.execute(qu, {'step': self.step,
-                                       'step_label': self.label,
-                                       'divisor': self.divisor,
-                                       'batch_id': self.batch_id
-                                       })
+        cr_query = 'CREATE TEMPORARY TABLE @tbl@ (LIKE so_ana_doc_worker.page_meta_info)'.replace('@tbl@', tmp_table_name)
+        dr_query = 'DROP TABLE @tbl@'.replace('@tbl@', tmp_table_name)
+        conn.execute(cr_query)
+        sel_query = ' insert into @tbl@ (' \
+                    ' select * from so_ana_doc_worker.page_meta_info ' \
+                    ' where step=%(step)s ' \
+                    ' and step_label=%(step_label)s ' \
+                    ' and MOD(ord_key,%(divisor)s)=%(batch_id)s)'.replace('@tbl@', tmp_table_name)
+
+        conn.execute(sel_query, {'step': self.step,
+                                 'step_label': self.label,
+                                 'divisor': self.divisor,
+                                 'batch_id': self.batch_id
+                                 })
+
+        qu = 'select post_id, ord_key, ml_tag from @tbl@'.replace('@tbl@', tmp_table_name)
+
+        res_cursor = conn.execute(qu)
 
         for res_row in res_cursor:
             yield res_row
+
+        conn.execute(dr_query)
 
 @with_register
 @dataclass(frozen=False)
@@ -197,22 +211,36 @@ class BatchResultBase(StepDescr):
         self.result_class_name = cls.__name__
 
     def result_iterator(self, conn):
-        qu = f'select post_id, ord_key, ml_tag from so_ana_management.post_results ' \
-             'where step=%(step)s ' \
-             'and step_label=%(step_label)s ' \
-             'and result_class_name=%(result_class_name)s ' \
-             'and MOD(ord_key,%(divisor)s)=%(batch_id)s ' \
-             'and exit_code = 0'
+        # note: in order to avoid (very rare) locking problems: data is copied to a temporary table
+        tmp_table_template = 'tmp_@uuid@'
+        tmp_table_name = tmp_table_template.replace('@uuid@', str(uuid.uuid4())).replace('-', '_')
 
-        res_cursor = conn.execute(qu, {'step': self.step,
-                                       'step_label': self.label,
-                                       'result_class_name': self.result_class_name,
-                                       'divisor': self.divisor,
-                                       'batch_id': self.batch_id
-                                       })
+        cr_query = 'CREATE TEMPORARY TABLE @tbl@ (LIKE so_ana_management.post_results)'.replace('@tbl@', tmp_table_name)
+        dr_query = 'DROP TABLE @tbl@'.replace('@tbl@', tmp_table_name)
+        conn.execute(cr_query)
+        sel_query = 'insert into @tbl@ (' \
+                    'select * from so_ana_management.post_results ' \
+                    'where step=%(step)s ' \
+                    'and step_label=%(step_label)s ' \
+                    'and result_class_name=%(result_class_name)s ' \
+                    'and MOD(ord_key,%(divisor)s)=%(batch_id)s ' \
+                    'and exit_code = 0)'.replace('@tbl@', tmp_table_name)
+
+        conn.execute(sel_query, {'step': self.step,
+                                 'step_label': self.label,
+                                 'result_class_name': self.result_class_name,
+                                 'divisor': self.divisor,
+                                 'batch_id': self.batch_id
+                                 })
+
+        qu = 'select post_id, ord_key, ml_tag from @tbl@'.replace('@tbl@', tmp_table_name)
+
+        res_cursor = conn.execute(qu)
 
         for res_row in res_cursor:
             yield res_row
+
+        conn.execute(dr_query)
 
 @with_register
 @dataclass

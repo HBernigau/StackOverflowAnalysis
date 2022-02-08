@@ -22,7 +22,7 @@ import click
 
 import so_ana_management.management_deps as management_deps
 import so_ana_management.flow as so_ana_flow
-from sqlalchemy_models.db_deps import prod_db_deps_container
+from so_ana_sqlalchemy_models.db_deps import prod_db_deps_container
 
 
 ###################### Sample flow tasks and flow

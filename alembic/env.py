@@ -3,7 +3,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
-import sqlalchemy_models.models as so_ana_models
+import so_ana_sqlalchemy_models.models as so_ana_models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

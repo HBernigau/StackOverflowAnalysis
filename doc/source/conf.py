@@ -15,9 +15,6 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(Path(os.path.abspath(__file__)).parents[2]))
-print(sys.path)
-import so_ana_doc_worker.extr_post_deps
-
 
 # -- Project information -----------------------------------------------------
 

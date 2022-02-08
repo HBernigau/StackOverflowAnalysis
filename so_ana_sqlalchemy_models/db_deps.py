@@ -17,7 +17,7 @@ from datetime import datetime, date
 
 import so_ana_util
 import so_ana_util.common_types as common_types
-import sqlalchemy_models.models as sqamod
+import so_ana_sqlalchemy_models.models as sqamod
 import inspect
 from dotted_dict import DottedDict
 import time
@@ -403,7 +403,7 @@ class DBDeps(containers.DeclarativeContainer):
                                    d2es=d2es,
                                    get_session=get_session,
                                    logger=db_logger,
-                                   enable_sql_alchemy_logging=False
+                                   enable_sql_alchemy_logging=True
                          )
 
     tbl_specs=providers.Singleton(lambda: sqamod.tbl_specs)

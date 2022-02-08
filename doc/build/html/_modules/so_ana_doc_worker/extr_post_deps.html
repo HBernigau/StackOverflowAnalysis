@@ -86,37 +86,9 @@
 <span class="kn">from</span> <span class="nn">circuitbreaker</span> <span class="kn">import</span> <span class="n">circuit</span><span class="p">,</span> <span class="n">CircuitBreakerMonitor</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
 
-<span class="kn">import</span> <span class="nn">so_ana_util</span>
-<span class="kn">from</span> <span class="nn">so_ana_util.common_types</span> <span class="kn">import</span> <span class="n">get_tst_logger</span><span class="p">,</span> <span class="n">get_null_logger</span><span class="p">,</span> <span class="n">get_prod_logger</span><span class="p">,</span> <span class="n">TstHandler</span>
+<span class="c1"># import so_ana_util</span>
+<span class="kn">import</span> <span class="nn">so_ana_util.common_types</span>
 
-
-<div class="viewcode-block" id="AbstractContentDownloader"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.AbstractContentDownloader">[docs]</a><span class="k">class</span> <span class="nc">AbstractContentDownloader</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    This class represents an abstract base class for a content downloader.</span>
-
-<span class="sd">    Concrete representations will be implemented by the real  downloader and by</span>
-<span class="sd">    a mock downloader that reads in data from hard disk.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-<div class="viewcode-block" id="AbstractContentDownloader.metadata_by_topic_and_page"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.metadata_by_topic_and_page">[docs]</a>    <span class="k">def</span> <span class="nf">metadata_by_topic_and_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">page_nr</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Requests a meta data page by topic and page number</span>
-
-<span class="sd">        :param topic: topic label</span>
-<span class="sd">        :param page_nr: the page number</span>
-
-<span class="sd">        :return: the requested page as string</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;To be implemented in subclass&#39;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="AbstractContentDownloader.post_by_id"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.AbstractContentDownloader.post_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">post_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">post_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        requests a post by id</span>
-
-<span class="sd">        :param post_id: id of the post</span>
-<span class="sd">        :return: the content of the post as string</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;To be implemented in subclass&#39;</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="RequResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.RequResult">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">RequResult</span><span class="p">:</span>
@@ -158,7 +130,7 @@
             <span class="k">raise</span> <span class="n">HTTPError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;request &quot;</span><span class="si">{</span><span class="n">page_url</span><span class="si">}</span><span class="s1">&quot; exited with code </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="WebContentDownloader"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.WebContentDownloader">[docs]</a><span class="k">class</span> <span class="nc">WebContentDownloader</span><span class="p">(</span><span class="n">AbstractContentDownloader</span><span class="p">):</span>
+<div class="viewcode-block" id="WebContentDownloader"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_doc_worker.extr_post_deps.WebContentDownloader">[docs]</a><span class="k">class</span> <span class="nc">WebContentDownloader</span><span class="p">():</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">stack_exchange_ws</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -168,7 +140,7 @@
                  <span class="n">requ_delay</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
                  <span class="n">recovery_timeout</span><span class="o">=</span><span class="mi">400</span><span class="p">):</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span> <span class="ow">or</span> <span class="n">get_null_logger</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span> <span class="ow">or</span> <span class="n">so_ana_util</span><span class="o">.</span><span class="n">common_types</span><span class="o">.</span><span class="n">get_null_logger</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">user_agent</span> <span class="o">=</span> <span class="n">user_agent</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">from_email</span> <span class="o">=</span> <span class="n">from_email</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stack_exchange_ws</span> <span class="o">=</span> <span class="n">stack_exchange_ws</span>

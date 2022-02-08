@@ -9,12 +9,9 @@ import so_ana_doc_worker.extr_post_deps as extr_post_deps
 from datetime import datetime
 from bs4 import BeautifulSoup
 from so_ana_doc_worker.schemas import PostMetaData, PageRawData, ExtractResult, \
-    DownloadPostResult, DownloadPageResult,  PostRawData, WorkerSummaryReport, \
+    DownloadPostResult, DownloadPageResult,  PostRawData, \
     DownloadPageFullResult, DownloadPostFullResult, ExtractFullResult
-from sqlalchemy_models.db_deps import prod_db_deps_container
-import uuid
 import time
-import itertools
 from numpy.random import choice
 
 def extract_nr_pages(logger, downloader, topic):

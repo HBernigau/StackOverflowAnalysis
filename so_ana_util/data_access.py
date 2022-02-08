@@ -6,7 +6,7 @@ Date: 01.2022
 """
 
 from so_ana_doc_worker import schemas as so_ana_worker_schemas
-from sqlalchemy_models.db_deps import dict_to_es_key
+from so_ana_sqlalchemy_models.db_deps import dict_to_es_key
 
 class IteratorFromGenerator:
 

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>so_ana_sqlalchemy_models.db_deps &mdash; SO_analysis 1.0 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> SO_analysis
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/how_to_run.html">How to run stack overflow analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/Architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/user_guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../incl/API_doc.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SO_analysis</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>so_ana_sqlalchemy_models.db_deps</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for so_ana_sqlalchemy_models.db_deps</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">contains dependencies for data base access</span>
+
+<span class="sd">Author: `HBernigau &lt;https://github.com/HBernigau&gt;`_</span>
+<span class="sd">Date: 01.2022</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">dependency_injector</span> <span class="kn">import</span> <span class="n">containers</span><span class="p">,</span> <span class="n">providers</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">sessionmaker</span><span class="p">,</span> <span class="n">scoped_session</span>
+<span class="kn">from</span> <span class="nn">elasticsearch</span> <span class="kn">import</span> <span class="n">Elasticsearch</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">is_dataclass</span><span class="p">,</span> <span class="n">asdict</span>
+<span class="kn">from</span> <span class="nn">elasticsearch.serializer</span> <span class="kn">import</span> <span class="n">JSONSerializer</span>
+<span class="kn">import</span> <span class="nn">marshmallow_dataclass</span> <span class="k">as</span> <span class="nn">mmdc</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span>
+
+<span class="kn">import</span> <span class="nn">so_ana_util</span>
+<span class="kn">import</span> <span class="nn">so_ana_util.common_types</span> <span class="k">as</span> <span class="nn">common_types</span>
+<span class="kn">import</span> <span class="nn">so_ana_sqlalchemy_models.models</span> <span class="k">as</span> <span class="nn">sqamod</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">dotted_dict</span> <span class="kn">import</span> <span class="n">DottedDict</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">typing</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="kn">from</span> <span class="nn">so_ana_util.common_types</span> <span class="kn">import</span> <span class="n">get_prod_logger</span>
+<span class="kn">import</span> <span class="nn">so_ana_util.common_types</span> <span class="k">as</span> <span class="nn">so_ana_common_types</span>
+
+
+
+<div class="viewcode-block" id="CreateEngine"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.CreateEngine">[docs]</a><span class="k">class</span> <span class="nc">CreateEngine</span><span class="p">:</span>
+
+    <span class="n">_engine_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">db_conn_str</span><span class="p">,</span>
+                 <span class="n">application_name</span><span class="p">,</span>
+                 <span class="n">pool_size</span> <span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                 <span class="n">max_overflow</span> <span class="o">=</span> <span class="mi">0</span>
+                 <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">application_name</span> <span class="ow">in</span> <span class="n">CreateEngine</span><span class="o">.</span><span class="n">_engine_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">appl_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">application_name</span><span class="si">}</span><span class="s1"> (pid=</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s1">, thread=</span><span class="si">{</span><span class="n">threading</span><span class="o">.</span><span class="n">get_ident</span><span class="p">()</span><span class="si">}</span><span class="s1">)&#39;</span>
+            <span class="n">CreateEngine</span><span class="o">.</span><span class="n">_engine_dict</span><span class="p">[</span><span class="n">application_name</span><span class="p">]</span><span class="o">=</span><span class="n">create_engine</span><span class="p">(</span>  <span class="n">db_conn_str</span><span class="p">,</span>
+                                                                        <span class="n">pool_size</span><span class="o">=</span><span class="n">pool_size</span><span class="p">,</span>
+                                                                        <span class="n">max_overflow</span><span class="o">=</span><span class="n">max_overflow</span><span class="p">,</span>
+                                                                        <span class="n">connect_args</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;application_name&#39;</span><span class="p">:</span> <span class="n">appl_name</span><span class="p">}</span>
+                                                                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">CreateEngine</span><span class="o">.</span><span class="n">_engine_dict</span><span class="p">[</span><span class="n">application_name</span><span class="p">]</span></div>
+
+<span class="n">cust_create_engine</span> <span class="o">=</span> <span class="n">CreateEngine</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="dict_to_es_key"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.dict_to_es_key">[docs]</a><span class="k">def</span> <span class="nf">dict_to_es_key</span><span class="p">(</span><span class="n">key_dict</span><span class="p">):</span>
+    <span class="n">sort_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">key_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">return</span> <span class="s1">&#39;;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">key_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">sort_keys</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="DCEncoder"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DCEncoder">[docs]</a><span class="k">class</span> <span class="nc">DCEncoder</span><span class="p">(</span><span class="n">JSONSerializer</span><span class="p">):</span>
+
+<div class="viewcode-block" id="DCEncoder.loads"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DCEncoder.loads">[docs]</a>    <span class="k">def</span> <span class="nf">loads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DCEncoder.dumps"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DCEncoder.dumps">[docs]</a>    <span class="k">def</span> <span class="nf">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">mmdc</span><span class="o">.</span><span class="n">class_schema</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">s</span><span class="p">))()</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">schema</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">res</span></div></div>
+
+<div class="viewcode-block" id="provide_dc_type"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.provide_dc_type">[docs]</a><span class="k">def</span> <span class="nf">provide_dc_type</span><span class="p">(</span><span class="n">pot_DC</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">pot_DC</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pot_DC</span><span class="p">,</span> <span class="s1">&#39;nested&#39;</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pot_DC</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">_GenericAlias</span><span class="p">):</span>
+        <span class="n">arg0</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pot_DC</span><span class="p">,</span> <span class="s1">&#39;__args__&#39;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">arg0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">arg0</span><span class="p">,</span> <span class="s1">&#39;nested&#39;</span>
+        <span class="k">elif</span> <span class="n">arg0</span> <span class="ow">is</span> <span class="n">datetime</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">arg0</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span>
+        <span class="k">elif</span> <span class="n">arg0</span> <span class="ow">is</span> <span class="n">date</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">arg0</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="DC2ES"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES">[docs]</a><span class="k">class</span> <span class="nc">DC2ES</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">es</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_cache</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_transl</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">common_types</span><span class="o">.</span><span class="n">UUID</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="s1">&#39;integer&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="nb">float</span><span class="p">,</span><span class="s1">&#39;double&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="s1">&#39;boolean&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">datetime</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="s1">&#39;date&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="s1">&#39;text&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="s1">&#39;integer&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="s1">&#39;double&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">],</span> <span class="s1">&#39;boolean&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="n">date</span><span class="p">],</span> <span class="s1">&#39;date&#39;</span><span class="p">),</span>
+                    <span class="p">(</span><span class="n">List</span><span class="p">[</span><span class="n">datetime</span><span class="p">],</span> <span class="s1">&#39;date&#39;</span><span class="p">)</span>
+                    <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fb_val</span> <span class="o">=</span> <span class="s1">&#39;text&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">=</span><span class="n">es</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_std_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;settings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;number_of_shards&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;number_of_replicas&quot;</span><span class="p">:</span> <span class="mi">0</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;mappings&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;dynamic&quot;</span><span class="p">:</span> <span class="s2">&quot;strict&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">settings</span>
+
+<div class="viewcode-block" id="DC2ES.properties"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.properties">[docs]</a>    <span class="k">def</span> <span class="nf">properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+        <span class="n">prop_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">field_obj</span> <span class="ow">in</span> <span class="n">dc</span><span class="o">.</span><span class="n">__dataclass_fields__</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">src_type</span><span class="p">,</span> <span class="n">tar_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_transl</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">field_obj</span><span class="o">.</span><span class="n">type</span> <span class="ow">is</span> <span class="n">src_type</span><span class="p">:</span>
+                    <span class="n">prop_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">tar_type</span><span class="p">}</span>
+                    <span class="k">if</span> <span class="n">tar_type</span><span class="o">==</span><span class="s1">&#39;text&#39;</span><span class="p">:</span>
+                        <span class="n">prop_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">][</span><span class="s1">&#39;analyzer&#39;</span><span class="p">]</span><span class="o">=</span><span class="s1">&#39;whitespace&#39;</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">inner_type</span><span class="p">,</span> <span class="n">field_type</span> <span class="o">=</span> <span class="n">provide_dc_type</span><span class="p">(</span><span class="n">field_obj</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+                <span class="n">prop_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="n">field_type</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">fb_val</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">field_type</span><span class="o">==</span><span class="s1">&#39;nested&#39;</span><span class="p">:</span>
+                    <span class="n">prop_dict</span><span class="p">[</span><span class="n">field_name</span><span class="p">][</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">(</span><span class="n">inner_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">prop_dict</span></div>
+
+<div class="viewcode-block" id="DC2ES.get_std_settings"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.get_std_settings">[docs]</a>    <span class="k">def</span> <span class="nf">get_std_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+        <span class="n">props</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">(</span><span class="n">dc</span><span class="p">)</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_std_settings</span>
+        <span class="n">settings</span><span class="p">[</span><span class="s1">&#39;mappings&#39;</span><span class="p">][</span><span class="s1">&#39;properties&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">props</span>
+        <span class="k">return</span> <span class="n">settings</span></div>
+
+<div class="viewcode-block" id="DC2ES.create_index"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.create_index">[docs]</a>    <span class="k">def</span> <span class="nf">create_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_std_settings</span><span class="p">(</span><span class="n">dc</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index_name</span><span class="p">,</span> <span class="n">ignore</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;acknowledged&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">index_cache</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">index_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_index_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">dc</span><span class="p">):</span>
+            <span class="n">part</span> <span class="o">=</span> <span class="n">dc</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">part</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">dc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">return</span> <span class="s1">&#39;idx_&#39;</span> <span class="o">+</span> <span class="n">part</span>
+
+<div class="viewcode-block" id="DC2ES.create_indx_ifnex"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.create_indx_ifnex">[docs]</a>    <span class="k">def</span> <span class="nf">create_indx_ifnex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dc</span><span class="p">):</span>
+        <span class="n">idx_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">dc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">idx_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_cache</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">idx_name</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">create_index</span><span class="p">(</span><span class="n">idx_name</span><span class="p">,</span> <span class="n">dc</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;stores data class in elastic search cluster&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_dataclass</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Method requires a data class as input.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_indx_ifnex</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">asdict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="k">def</span> <span class="nf">_error_on_not_dataclass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">DC</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">is_dataclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span> <span class="ow">and</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Method requires a data class as input.&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DC2ES.get"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;receives elements by key ands stores in data class&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="n">idx_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="n">res_plain</span> <span class="o">=</span> <span class="n">DottedDict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">idx_name</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">key</span><span class="p">)[</span><span class="s1">&#39;_source&#39;</span><span class="p">])</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">so_ana_common_types</span><span class="o">.</span><span class="n">fill_dc_from_obj</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span><span class="n">res_plain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="DC2ES.delete"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="n">idx_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx_name</span><span class="p">,</span> <span class="n">doc_type</span><span class="o">=</span><span class="s1">&#39;_doc&#39;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="DC2ES.delete_by_query"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.delete_by_query">[docs]</a>    <span class="k">def</span> <span class="nf">delete_by_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">,</span> <span class="n">query_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deletes documents that matches a given query</span>
+<span class="sd">        :param DC:</span>
+<span class="sd">        :param query_dict: compare https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html</span>
+<span class="sd">        and https://elasticsearch-dsl.readthedocs.io/en/latest/</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">DC</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="s1">&#39;_all&#39;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">DC</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">DC</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="n">DC</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">delete_by_query</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx_name</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">query_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="DC2ES.search"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DC2ES.search">[docs]</a>    <span class="k">def</span> <span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">,</span> <span class="n">query_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deletes documents that matches a given query</span>
+<span class="sd">        :param DC:</span>
+<span class="sd">        :param query_dict: compare https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html</span>
+<span class="sd">        and https://elasticsearch-dsl.readthedocs.io/en/latest/</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tr_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">do_parse</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">DC</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                <span class="n">tr_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">item</span><span class="p">)]</span><span class="o">=</span><span class="n">item</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">DC</span><span class="p">])</span>
+            <span class="n">do_parse</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="n">DC</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_error_on_not_dataclass</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+            <span class="n">idx_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span><span class="p">(</span><span class="n">DC</span><span class="p">)</span>
+            <span class="n">tr_dict</span><span class="p">[</span><span class="n">idx_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">DC</span>
+            <span class="n">do_parse</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">res_raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">es</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">idx_name</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">query_dict</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">DottedDict</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res_raw</span><span class="p">[</span><span class="s1">&#39;hits&#39;</span><span class="p">][</span><span class="s1">&#39;hits&#39;</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="n">do_parse</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">so_ana_common_types</span><span class="o">.</span><span class="n">fill_dc_from_obj</span><span class="p">(</span><span class="n">tr_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;_index&#39;</span><span class="p">]],</span> <span class="n">item</span><span class="p">[</span><span class="s1">&#39;_source&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">res_raw</span><span class="p">,</span> <span class="n">res</span></div></div>
+
+<div class="viewcode-block" id="CreateSessionFactory"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.CreateSessionFactory">[docs]</a><span class="k">class</span> <span class="nc">CreateSessionFactory</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bind</span><span class="p">):</span>
+        <span class="n">CreateSessionFactory</span><span class="o">.</span><span class="n">bind</span> <span class="o">=</span> <span class="n">bind</span>
+        <span class="n">session_factory</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">bind</span><span class="p">,</span> <span class="n">future</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">CreateSessionFactory</span><span class="o">.</span><span class="n">Session</span> <span class="o">=</span> <span class="n">scoped_session</span><span class="p">(</span><span class="n">session_factory</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CreateSessionFactory</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="get_es"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.get_es">[docs]</a><span class="k">def</span> <span class="nf">get_es</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">serializer</span><span class="p">):</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="n">Elasticsearch</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">serializer</span><span class="o">=</span><span class="n">serializer</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">max_retries</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">retry_on_timeout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">es</span></div>
+
+<div class="viewcode-block" id="DBAccResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DBAccResult">[docs]</a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">DBAccResult</span><span class="p">:</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">msg</span><span class="p">:</span> <span class="nb">str</span></div>
+
+<div class="viewcode-block" id="save2es"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.save2es">[docs]</a><span class="k">def</span> <span class="nf">save2es</span><span class="p">(</span><span class="n">d2es</span><span class="p">,</span> <span class="n">key_dict</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">dict_to_es_key</span><span class="p">(</span><span class="n">key_dict</span><span class="p">)</span>
+    <span class="n">ex_res</span> <span class="o">=</span> <span class="n">d2es</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ex_res</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;created&#39;</span><span class="p">:</span>
+        <span class="n">res_value</span> <span class="o">=</span> <span class="n">ex_res</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not write data for key &quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&quot; to elastic search data base, result is &quot;</span><span class="si">{</span><span class="n">res_value</span><span class="si">}</span><span class="s1">&quot;.&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data for </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1"> written to es.&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="SaveTDB"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.SaveTDB">[docs]</a><span class="k">class</span> <span class="nc">SaveTDB</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d2es</span><span class="p">,</span> <span class="n">get_session</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">enable_sql_alchemy_logging</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d2es</span> <span class="o">=</span> <span class="n">d2es</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_session</span> <span class="o">=</span> <span class="n">get_session</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">=</span><span class="n">get_session</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">=</span><span class="n">logger</span>
+        <span class="k">if</span> <span class="n">enable_sql_alchemy_logging</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s1">&#39;[</span><span class="si">%(asctime)s</span><span class="s1">] </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> | </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;sqlalchemy.engine&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_session_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">DBAccResult</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;error in trial </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">/3 : </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1"> - trying again in 1s...&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_session_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">DC</span><span class="p">,</span> <span class="n">key_dict</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">DBAccResult</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DC</span><span class="p">,</span> <span class="n">key_dict</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;error in trial </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">/3 : </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1"> - trying again in 1s...&#39;</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">key_lst</span><span class="p">,</span> <span class="n">to_pg</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">to_es</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="n">key_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">key_lst</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">to_pg</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">old_val</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">res</span><span class="p">,</span> <span class="n">old_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session_get</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">key_dict</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">old_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session_add</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">asdict</span><span class="p">(</span><span class="n">old_val</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="nb">setattr</span><span class="p">(</span><span class="n">old_val</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">item</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session_add</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not add  data with keys &quot;</span><span class="si">{</span><span class="n">key_dict</span><span class="si">}</span><span class="s1">&quot; to pg session, msg: &quot;</span><span class="si">{</span><span class="n">res</span><span class="o">.</span><span class="n">msg</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data for </span><span class="si">{</span><span class="n">key_dict</span><span class="si">}</span><span class="s1"> written to pg.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">to_es</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">dict_to_es_key</span><span class="p">(</span><span class="n">key_dict</span><span class="p">)</span>
+            <span class="n">ex_res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">d2es</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ex_res</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;created&#39;</span><span class="p">:</span>
+                <span class="n">res_value</span> <span class="o">=</span> <span class="n">ex_res</span><span class="p">[</span><span class="s1">&#39;result&#39;</span><span class="p">]</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;could not write data for key &quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&quot; to elastic search data base, result is &quot;</span><span class="si">{</span><span class="n">res_value</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;data for </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1"> written to es.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="pg_url_from_parts"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.pg_url_from_parts">[docs]</a><span class="k">def</span> <span class="nf">pg_url_from_parts</span><span class="p">(</span><span class="n">user_name</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">server_name</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">db_name</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;/&#39;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;postgresql:</span><span class="si">{</span><span class="n">s</span><span class="o">+</span><span class="n">s</span><span class="si">}{</span><span class="n">user_name</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">pw</span><span class="si">}</span><span class="s1">@</span><span class="si">{</span><span class="n">server_name</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}{</span><span class="n">s</span><span class="si">}{</span><span class="n">db_name</span><span class="si">}</span><span class="s1">&#39;</span></div>
+
+<div class="viewcode-block" id="es_url_from_parts"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.es_url_from_parts">[docs]</a><span class="k">def</span> <span class="nf">es_url_from_parts</span><span class="p">(</span><span class="n">server_name</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">server_name</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">&#39;</span></div>
+
+<div class="viewcode-block" id="DBDeps"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.DBDeps">[docs]</a><span class="k">class</span> <span class="nc">DBDeps</span><span class="p">(</span><span class="n">containers</span><span class="o">.</span><span class="n">DeclarativeContainer</span><span class="p">):</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Configuration</span><span class="p">()</span>
+
+    <span class="n">pg_conn_str</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">pg_url_from_parts</span><span class="p">,</span>
+                                    <span class="n">user_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">user_name</span><span class="p">,</span>
+                                    <span class="n">pw</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pw</span><span class="p">,</span>
+                                    <span class="n">server_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">server_name</span><span class="p">,</span>
+                                    <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                                    <span class="n">db_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">db_name</span>
+                                    <span class="p">)</span>
+
+    <span class="n">es_conn_str</span> <span class="o">=</span>  <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span>   <span class="n">es_url_from_parts</span><span class="p">,</span>
+                                        <span class="n">server_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">es_server_name</span><span class="p">,</span>
+                                        <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">es_port</span><span class="p">,</span>
+                                    <span class="p">)</span>
+
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span>   <span class="n">cust_create_engine</span><span class="p">,</span>
+                                    <span class="n">application_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">app_conn_name</span><span class="p">,</span>
+                                    <span class="n">db_conn_str</span><span class="o">=</span><span class="n">pg_conn_str</span>
+                                    <span class="p">)</span>
+
+    <span class="n">logging_engine</span><span class="o">=</span><span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span> <span class="n">cust_create_engine</span><span class="p">,</span>
+                                        <span class="n">application_name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">log_conn_name</span><span class="p">,</span>
+                                        <span class="n">db_conn_str</span><span class="o">=</span><span class="n">pg_conn_str</span>
+                                        <span class="p">)</span>
+
+    <span class="n">get_session</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span>  <span class="n">CreateSessionFactory</span><span class="p">,</span>
+                                        <span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="n">get_logging_session</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span>  <span class="n">CreateSessionFactory</span><span class="p">,</span>
+                                                <span class="n">bind</span><span class="o">=</span><span class="n">logging_engine</span><span class="p">)</span>
+
+    <span class="n">es</span><span class="o">=</span><span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">get_es</span><span class="p">,</span>
+                         <span class="n">address</span><span class="o">=</span><span class="n">es_conn_str</span><span class="p">,</span>
+                         <span class="n">serializer</span><span class="o">=</span><span class="n">DCEncoder</span><span class="p">())</span>
+
+    <span class="n">d2es</span><span class="o">=</span><span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">DC2ES</span><span class="p">,</span>
+                           <span class="n">es</span><span class="o">=</span><span class="n">es</span><span class="p">)</span>
+
+    <span class="n">db_logger</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span>  <span class="n">get_prod_logger</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">db_logger_name</span><span class="p">,</span>
+                                    <span class="n">get_session</span><span class="o">=</span><span class="n">get_logging_session</span><span class="p">,</span>
+                                    <span class="n">modus</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">modus</span><span class="p">)</span>
+
+    <span class="n">script_logger</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span>  <span class="n">get_prod_logger</span><span class="p">,</span>
+                                        <span class="n">name</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">script_logger_name</span><span class="p">,</span>
+                                        <span class="n">get_session</span><span class="o">=</span><span class="n">get_logging_session</span><span class="p">,</span>
+                                        <span class="n">modus</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">modus</span><span class="p">)</span>
+
+
+    <span class="n">save_to_db</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">Factory</span><span class="p">(</span><span class="n">SaveTDB</span><span class="p">,</span>
+                                   <span class="n">d2es</span><span class="o">=</span><span class="n">d2es</span><span class="p">,</span>
+                                   <span class="n">get_session</span><span class="o">=</span><span class="n">get_session</span><span class="p">,</span>
+                                   <span class="n">logger</span><span class="o">=</span><span class="n">db_logger</span><span class="p">,</span>
+                                   <span class="n">enable_sql_alchemy_logging</span><span class="o">=</span><span class="kc">True</span>
+                         <span class="p">)</span>
+
+    <span class="n">tbl_specs</span><span class="o">=</span><span class="n">providers</span><span class="o">.</span><span class="n">Singleton</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">sqamod</span><span class="o">.</span><span class="n">tbl_specs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LazyProviderAccessObject"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.LazyProviderAccessObject">[docs]</a><span class="k">class</span> <span class="nc">LazyProviderAccessObject</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">provider</span> <span class="o">=</span> <span class="n">provider</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">new_val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span> <span class="n">value</span><span class="p">)()</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">new_val</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">new_val</span></div>
+
+<span class="n">db_deps</span> <span class="o">=</span> <span class="n">DBDeps</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="prod_db_deps_container"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_sqlalchemy_models.db_deps.prod_db_deps_container">[docs]</a><span class="k">def</span> <span class="nf">prod_db_deps_container</span><span class="p">(</span><span class="n">user_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">pw</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">server_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">port</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">db_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">es_server_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">es_port</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">app_conn_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">log_conn_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">db_logger_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">script_logger_name</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">modus</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;test&#39;</span><span class="p">):</span>
+    <span class="n">db_config</span> <span class="o">=</span> <span class="n">so_ana_util</span><span class="o">.</span><span class="n">get_main_config</span><span class="p">()[</span><span class="s1">&#39;db_opts&#39;</span><span class="p">]</span>
+    <span class="n">lazy_access_ob</span> <span class="o">=</span> <span class="n">LazyProviderAccessObject</span><span class="p">(</span><span class="n">db_deps</span><span class="p">)</span>
+    <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_dict</span><span class="p">({</span><span class="s1">&#39;user_name&#39;</span><span class="p">:</span> <span class="n">user_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;user_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;pw&#39;</span><span class="p">:</span> <span class="n">pw</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;pw&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;server_name&#39;</span><span class="p">:</span> <span class="n">server_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;server_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="n">port</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;port&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;db_name&#39;</span><span class="p">:</span> <span class="n">db_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;db_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;es_server_name&#39;</span><span class="p">:</span> <span class="n">es_server_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;elastic_search&#39;</span><span class="p">][</span><span class="s1">&#39;server_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;es_port&#39;</span><span class="p">:</span> <span class="n">es_port</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;elastic_search&#39;</span><span class="p">][</span><span class="s1">&#39;port&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;app_conn_name&#39;</span><span class="p">:</span> <span class="n">app_conn_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;app_conn_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;log_conn_name&#39;</span><span class="p">:</span> <span class="n">log_conn_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;log_conn_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;db_logger_name&#39;</span><span class="p">:</span> <span class="n">db_logger_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;db_logger_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;script_logger_name&#39;</span><span class="p">:</span> <span class="n">script_logger_name</span> <span class="ow">or</span> <span class="n">db_config</span><span class="p">[</span><span class="s1">&#39;postgres&#39;</span><span class="p">][</span><span class="s1">&#39;script_logger_name&#39;</span><span class="p">],</span>
+                                              <span class="s1">&#39;modus&#39;</span><span class="p">:</span> <span class="n">modus</span>
+                                             <span class="p">})</span>
+    <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">get_session</span><span class="p">()</span>
+    <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">lazy_access_ob</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">lazy_access_ob</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">sample_obj</span> <span class="o">=</span> <span class="n">prod_db_deps_container</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">sample_obj</span><span class="o">.</span><span class="n">pg_conn_str</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, HBernigau.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

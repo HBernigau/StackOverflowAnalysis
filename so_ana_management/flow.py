@@ -29,7 +29,7 @@ import marshmallow_dataclass
 import so_ana_management.management_utils as so_ana_mu
 import so_ana_management.management_deps as management_deps
 import so_ana_util
-from sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
+from so_ana_sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
 from so_ana_util.common_types import CustomLogHandler,fill_dc_from_obj
 from so_ana_util.data_access import get_doc_iterator, IteratorFromGenerator
 from so_ana_doc_worker import schemas as so_ana_worker_schemas

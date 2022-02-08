@@ -20,7 +20,7 @@ from gensim.models.phrases import Phrases, Phraser
 import copy
 
 from so_ana_util.data_access import get_txt, get_doc_iterator, IteratorFromGenerator
-from sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
+from so_ana_sqlalchemy_models.db_deps import prod_db_deps_container, dict_to_es_key
 from so_ana_doc_worker.schemas import ExtractResult, PostRawData, ExtractPostFullResult, QuestionInfo, Answer, \
     TokenizationResult, TokenizationData, FullTokenizationResult, FullBoWResult, BoWResult, BoWData
 
