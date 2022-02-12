@@ -24,7 +24,7 @@ On the technical side the application uses:
 
 ## How to proceed
 
-| :warning: Currently the code cannot be executed. See [issue 1](https://github.com/HBernigau/StackOverflowAnalysis/issues/1) for details and be a little patient for the second release... 😊 |
+| :warning: Currently the code cannot be executed due to a structural change in the html code posted by stack-overflow . See [issue 1](https://github.com/HBernigau/StackOverflowAnalysis/issues/1) for details and be a little patient for the second release... 😊 |
 | --- |
 
 Download the repository and have a look on the documentation in *./docs/build/html/index.html*, 
