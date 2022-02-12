@@ -26,7 +26,7 @@ On the technical side the application uses:
 
 | :warning: Currently the code cannot be executed. |
 |:--- |
-| The reason is a structural change in the html code served by stack-overflow servers which renders adaptation of the parsing module necessary. See [issue 1](https://github.com/HBernigau/StackOverflowAnalysis/issues/1) for details and be a little patient for the second release... 😊 |
+| The reason is a structural change in the html code served by stack-overflow servers which requires adaptations on the parsing module. See [issue 1](https://github.com/HBernigau/StackOverflowAnalysis/issues/1) for details and be a little patient for the second release... 😊 |
 
 
 Download the repository and have a look on the documentation in *./docs/build/html/index.html*, 
