@@ -230,9 +230,9 @@ run in a <a class="reference external" href="https://dask.org/">dask-cluster</a>
 </pre></div>
 </div>
 <ol class="arabic simple" start="3">
-<li><p>Start the prefect client:</p></li>
+<li><p>Start the Prefect agent:</p></li>
 </ol>
-<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>launch_prefect_client.bat
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>launch_prefect_agent.bat
 </pre></div>
 </div>
 <p>Now you can use the command line application, <em>so_ana.py</em>,
@@ -267,7 +267,7 @@ if you want to back-up the prefect database. Otherwise you can skip these lines<
 The most straight-forward way to run the sample configuration
 <em>adm_smpl.yaml</em>, is using the command line utility, <em>so_ana.py</em>:</p>
 <div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>activate_venv.bat
-python so_ana.py run --test adm_smpl.yaml python so_ana.py run --test adm_smpl.yaml Holger.Bernigau@gmx.de <span class="s2">&quot;Software Engineering Research@University of St.Gallen&quot;</span>
+python so_ana.py run --test adm_smpl.yaml Holger.Bernigau@gmx.de <span class="s2">&quot;Software Engineering Research@University of St.Gallen&quot;</span>
 </pre></div>
 </div>
 <p>This command executes the flow with configuration <em>adm_smpl.yaml</em> in test modus.

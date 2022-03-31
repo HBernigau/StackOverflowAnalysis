@@ -192,11 +192,11 @@ In order to run the cluster do the following:
 
    launch_prefect_server.bat
 
-3. Start the prefect client:
+3. Start the Prefect agent:
 
 .. code-block:: bat
 
-   launch_prefect_client.bat
+   launch_prefect_agent.bat
 
 Now you can use the command line application, *so_ana.py*,
 to interact with the server. In order to see all
@@ -236,7 +236,7 @@ The most straight-forward way to run the sample configuration
 .. code-block:: bat
 
    activate_venv.bat
-   python so_ana.py run --test adm_smpl.yaml python so_ana.py run --test adm_smpl.yaml Holger.Bernigau@gmx.de "Software Engineering Research@University of St.Gallen"
+   python so_ana.py run --test adm_smpl.yaml Holger.Bernigau@gmx.de "Software Engineering Research@University of St.Gallen"
 
 This command executes the flow with configuration *adm_smpl.yaml* in test modus.
 For all requests to stack-overflow, the user provides some credentials within

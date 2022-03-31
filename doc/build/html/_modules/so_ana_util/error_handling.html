@@ -85,8 +85,13 @@
 <span class="sd">Date: 01.2022</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">asdict</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<div class="viewcode-block" id="get_traceback"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.get_traceback">[docs]</a><span class="k">def</span> <span class="nf">get_traceback</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">exc</span><span class="p">,</span> <span class="n">etype</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">tb</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="ExceptionInfo"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.ExceptionInfo">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">ExceptionInfo</span><span class="p">():</span>
@@ -114,10 +119,10 @@
         <span class="n">exc_args</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="s1">&#39;args&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">())]</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_args</span><span class="p">,</span> <span class="n">exc_details</span><span class="p">)</span></div></div>
 
-
-<div class="viewcode-block" id="get_traceback"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.get_traceback">[docs]</a><span class="k">def</span> <span class="nf">get_traceback</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">Exception</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">exc</span><span class="p">,</span> <span class="n">etype</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span> <span class="n">tb</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)</span></div>
-
+<div class="viewcode-block" id="ErrologEntry"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.ErrologEntry">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ErrologEntry</span><span class="p">:</span>
+    <span class="n">error_info</span><span class="p">:</span> <span class="n">ExceptionInfo</span>
+    <span class="n">trace_back</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="SoAnaException"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.SoAnaException">[docs]</a><span class="k">class</span> <span class="nc">SoAnaException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -149,8 +154,16 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">ExceptionInfo</span><span class="p">(</span><span class="n">exc_type</span><span class="o">=</span><span class="s1">&#39;FlowTaskError&#39;</span><span class="p">,</span>
                                  <span class="n">exc_args</span><span class="o">=</span><span class="n">get_traceback</span><span class="p">(</span><span class="n">exc</span><span class="p">),</span>
-                                 <span class="n">exc_details</span><span class="o">=</span><span class="n">ExceptionInfo</span><span class="o">.</span><span class="n">from_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+                                 <span class="n">exc_details</span><span class="o">=</span><span class="n">ExceptionInfo</span><span class="o">.</span><span class="n">from_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                                 <span class="p">)</span>
     <span class="k">return</span> <span class="n">wrapped</span></div>
+
+
+<div class="viewcode-block" id="print_formated_error_info"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_util.error_handling.print_formated_error_info">[docs]</a><span class="k">def</span> <span class="nf">print_formated_error_info</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="n">SoAnaException</span><span class="p">):</span>
+    <span class="n">err_info</span><span class="o">=</span><span class="n">ExceptionInfo</span><span class="o">.</span><span class="n">from_exception</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+    <span class="n">trb</span><span class="o">=</span><span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">get_traceback</span><span class="p">(</span><span class="n">exc</span><span class="p">)]</span>
+    <span class="n">res</span><span class="o">=</span><span class="n">asdict</span><span class="p">(</span><span class="n">ErrologEntry</span><span class="p">(</span><span class="n">err_info</span><span class="p">,</span> <span class="n">trb</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">res</span><span class="p">))</span></div>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="c1"># some demo code...</span>
@@ -181,6 +194,8 @@
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;All&#39;</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">exc_info</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nicely formatted&#39;</span><span class="p">)</span>
+            <span class="n">print_formated_error_info</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Details:&#39;</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">exc_info</span><span class="o">.</span><span class="n">exc_details</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">()</span>
