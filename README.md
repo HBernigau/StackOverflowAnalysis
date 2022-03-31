@@ -22,6 +22,12 @@ On the technical side the application uses:
 - Dask
 - and: lots of Python
 
+## Documentation
+
+| :warning: The documentation is work in progress. |
+
+For the project documentation see [Stackoverflow analysis on readthedocs](https://stackoverflowanalysis.readthedocs.io/en/latest).
+
 ## How to proceed
 
 | :warning: Currently the code cannot be executed. |
@@ -29,7 +35,7 @@ On the technical side the application uses:
 | The reason is a structural change in the html code served by stack-overflow servers in February 2022 which requires adaptations on the parsing module. See [issue 1](https://github.com/HBernigau/StackOverflowAnalysis/issues/1) for details and be a little patient for the second release... 😊 |
 
 
-Download the repository and have a look on the documentation in *./docs/build/html/index.html*, 
+Read the documentation, [Stackoverflow analysis on readthedocs](https://stackoverflowanalysis.readthedocs.io/en/latest),
 especially the section on installation.
 
 ## Background
