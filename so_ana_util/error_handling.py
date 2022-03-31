@@ -15,8 +15,13 @@ Author: `HBernigau <https://github.com/HBernigau>`_
 Date: 01.2022
 """
 import traceback
-from dataclasses import dataclass
-from typing import Union, List
+from dataclasses import dataclass, asdict
+from typing import Optional, List
+import yaml
+
+def get_traceback(exc: Exception):
+    return traceback.format_exception(value=exc, etype=type(exc), tb=exc.__traceback__)
+
 
 @dataclass
 class ExceptionInfo():
@@ -29,7 +34,7 @@ class ExceptionInfo():
     """
     exc_type: str
     exc_args: List[str]
-    exc_details: Union[None, 'ExceptionInfo']
+    exc_details: Optional['ExceptionInfo']
 
     @classmethod
     def from_exception(cls, exc: Exception):
@@ -44,10 +49,10 @@ class ExceptionInfo():
         exc_args = [str(item) for item in getattr(exc, 'args', list())]
         return cls(exc_type, exc_args, exc_details)
 
-
-def get_traceback(exc: Exception):
-    return traceback.format_exception(value=exc, etype=type(exc), tb=exc.__traceback__)
-
+@dataclass
+class ErrologEntry:
+    error_info: ExceptionInfo
+    trace_back: List[str]
 
 class SoAnaException(Exception):
     """
@@ -71,6 +76,25 @@ class SoAnaException(Exception):
     def as_exc_info(self):
         return ExceptionInfo.from_exception(self)
 
+def with_forward_error_func(func):
+
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            return ExceptionInfo(exc_type='FlowTaskError',
+                                 exc_args=get_traceback(exc),
+                                 exc_details=ExceptionInfo.from_exception(exc)
+                                 )
+    return wrapped
+
+
+def print_formated_error_info(exc: SoAnaException):
+    err_info=ExceptionInfo.from_exception(exc)
+    trb=[item for item in get_traceback(exc)]
+    res=asdict(ErrologEntry(err_info, trb))
+    print(yaml.safe_dump(res))
+
 if __name__ == '__main__':
     # some demo code...
 
@@ -88,6 +112,9 @@ if __name__ == '__main__':
         except Exception as exc:
             raise SomeHighLevelError('Custom exception caught', 42, exc_details=exc).with_traceback( exc.__traceback__) from exc
 
+    @with_forward_error_func
+    def throw_error_2():
+       throw_error()
 
     def main():
         try:
@@ -97,10 +124,16 @@ if __name__ == '__main__':
             print('All')
             print(exc_info)
             print()
+            print('Nicely formatted')
+            print_formated_error_info(exc)
             print('Details:')
             print(exc_info.exc_details)
             print()
             print('Traceback: ')
             print(''.join(get_traceback(exc)))
+            print('')
+            print('Output of wrapped function:')
+            print(throw_error_2())
+
 
     main()

@@ -217,19 +217,33 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_success</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr_failure</span>
 
 <div class="viewcode-block" id="PageDownloadsSuccessReport.extr_post_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.PageDownloadsSuccessReport.extr_post_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">extr_post_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
-        <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select post_id, ord_key, ml_tag from so_ana_doc_worker.page_meta_info &#39;</span> \
-             <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1">&#39;</span>
+        <span class="c1"># note: in order to avoid (very rare) locking problems: data is copied to a temporary table</span>
+        <span class="n">tmp_table_template</span> <span class="o">=</span> <span class="s1">&#39;tmp_@uuid@&#39;</span>
+        <span class="n">tmp_table_name</span> <span class="o">=</span> <span class="n">tmp_table_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@uuid@&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
 
-        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
-                                       <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
-                                       <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
-                                       <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
-                                       <span class="p">})</span>
+        <span class="n">cr_query</span> <span class="o">=</span> <span class="s1">&#39;CREATE TEMPORARY TABLE @tbl@ (LIKE so_ana_doc_worker.page_meta_info)&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+        <span class="n">dr_query</span> <span class="o">=</span> <span class="s1">&#39;DROP TABLE @tbl@&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cr_query</span><span class="p">)</span>
+        <span class="n">sel_query</span> <span class="o">=</span> <span class="s1">&#39; insert into @tbl@ (&#39;</span> \
+                    <span class="s1">&#39; select * from so_ana_doc_worker.page_meta_info &#39;</span> \
+                    <span class="s1">&#39; where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39; and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39; and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sel_query</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                 <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                 <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
+                                 <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
+                                 <span class="p">})</span>
+
+        <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select post_id, ord_key, ml_tag from @tbl@&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+
+        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">res_row</span> <span class="ow">in</span> <span class="n">res_cursor</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="n">res_row</span></div></div>
+            <span class="k">yield</span> <span class="n">res_row</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">dr_query</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="SkipPageDownloadsSuccessReport"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.SkipPageDownloadsSuccessReport">[docs]</a><span class="nd">@with_register</span>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -267,22 +281,36 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span></div>
 
 <div class="viewcode-block" id="BatchResultBase.result_iterator"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResultBase.result_iterator">[docs]</a>    <span class="k">def</span> <span class="nf">result_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
-        <span class="n">qu</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select post_id, ord_key, ml_tag from so_ana_management.post_results &#39;</span> \
-             <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and result_class_name=</span><span class="si">%(result_class_name)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1"> &#39;</span> \
-             <span class="s1">&#39;and exit_code = 0&#39;</span>
+        <span class="c1"># note: in order to avoid (very rare) locking problems: data is copied to a temporary table</span>
+        <span class="n">tmp_table_template</span> <span class="o">=</span> <span class="s1">&#39;tmp_@uuid@&#39;</span>
+        <span class="n">tmp_table_name</span> <span class="o">=</span> <span class="n">tmp_table_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@uuid@&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
 
-        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
-                                       <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
-                                       <span class="s1">&#39;result_class_name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name</span><span class="p">,</span>
-                                       <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
-                                       <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
-                                       <span class="p">})</span>
+        <span class="n">cr_query</span> <span class="o">=</span> <span class="s1">&#39;CREATE TEMPORARY TABLE @tbl@ (LIKE so_ana_management.post_results)&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+        <span class="n">dr_query</span> <span class="o">=</span> <span class="s1">&#39;DROP TABLE @tbl@&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cr_query</span><span class="p">)</span>
+        <span class="n">sel_query</span> <span class="o">=</span> <span class="s1">&#39;insert into @tbl@ (&#39;</span> \
+                    <span class="s1">&#39;select * from so_ana_management.post_results &#39;</span> \
+                    <span class="s1">&#39;where step=</span><span class="si">%(step)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39;and step_label=</span><span class="si">%(step_label)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39;and result_class_name=</span><span class="si">%(result_class_name)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39;and MOD(ord_key,</span><span class="si">%(divisor)s</span><span class="s1">)=</span><span class="si">%(batch_id)s</span><span class="s1"> &#39;</span> \
+                    <span class="s1">&#39;and exit_code = 0)&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sel_query</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;step&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span>
+                                 <span class="s1">&#39;step_label&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                 <span class="s1">&#39;result_class_name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_class_name</span><span class="p">,</span>
+                                 <span class="s1">&#39;divisor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">divisor</span><span class="p">,</span>
+                                 <span class="s1">&#39;batch_id&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_id</span>
+                                 <span class="p">})</span>
+
+        <span class="n">qu</span> <span class="o">=</span> <span class="s1">&#39;select post_id, ord_key, ml_tag from @tbl@&#39;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;@tbl@&#39;</span><span class="p">,</span> <span class="n">tmp_table_name</span><span class="p">)</span>
+
+        <span class="n">res_cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">qu</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">res_row</span> <span class="ow">in</span> <span class="n">res_cursor</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="n">res_row</span></div></div>
+            <span class="k">yield</span> <span class="n">res_row</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">dr_query</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="BatchResult"><a class="viewcode-back" href="../../incl/API_doc.html#so_ana_management.management_utils.BatchResult">[docs]</a><span class="nd">@with_register</span>
 <span class="nd">@dataclass</span>

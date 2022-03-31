@@ -16,7 +16,7 @@ class TblSpec:
     Wrapper for table specification data
     """
     args: List[Any] = field(default_factory=lambda: [])
-    kwargs: Dict[str, any] = field(default_factory=lambda: {})
+    kwargs: Dict[str, Any] = field(default_factory=lambda: {})
 
 class MappingArgs(TblSpec):
     """

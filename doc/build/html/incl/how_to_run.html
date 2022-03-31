@@ -87,7 +87,7 @@ git clone https://github.com/HBernigau/StackOverflowAnalysis.git
 </pre></div>
 </div>
 <p>After executing this command the folder <em>StackOverflowAnalysis</em> will be downloaded into the target folder.
-change into that folder by typing</p>
+Change into that folder by typing</p>
 <div class="highlight-bat notranslate"><div class="highlight"><pre><span></span><span class="k">cd</span> StackOverflowAnalysis
 </pre></div>
 </div>
@@ -132,8 +132,8 @@ which can be considered as a best-practice for dependency management in Python. 
 <p class="admonition-title">Note</p>
 <p>If you encounter a permission error like the following:</p>
 <img alt="../_images/Screenshot_permission_error.png" src="../_images/Screenshot_permission_error.png" />
-<p>Please switch to the user’s <em>Appdata/Local/Temp</em> folder in Windows explorer, right click on that folder and chose the menue item <em>“Properties”</em>
-from the context menue. In panel <em>General</em> uncheck the attribute <em>read-only</em> and in panel <em>Security</em> check the permissions and
+<p>Please switch to the user’s <em>AppData/Local/Temp</em> folder in Windows explorer, right click on that folder and choose the menu item <em>“Properties”</em>
+from the context menu. In panel <em>General</em> uncheck the attribute <em>read-only</em> and in panel <em>Security</em> check the permissions and
 readjust if appropriate. Then re-run the previous command.</p>
 </div>
 <div class="admonition note">
@@ -142,6 +142,9 @@ readjust if appropriate. Then re-run the previous command.</p>
 pip-tools (see <a class="reference external" href="https://github.com/jazzband/pip-tools/issues/1558">issue 1558 for pip-tools on Github</a> ),
 which can be fixed temporarily by the following work-around: Use a pip version below 22.0 .</p>
 <p>The command for installing a specific pip version (21 here) is:</p>
+<div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>pip install pip==21
+</pre></div>
+</div>
 </div>
 <p>Now within your activated virtual environment, you can sync the project’s requirements file with the virtual environment by typing:</p>
 <div class="highlight-bat notranslate"><div class="highlight"><pre><span></span>build_full.bat
@@ -157,9 +160,9 @@ from first order dependencies (i.e. you prefer using the latest available versio
 </section>
 <section id="start-docker-containers">
 <h2>Start Docker containers<a class="headerlink" href="#start-docker-containers" title="Permalink to this headline"></a></h2>
-<p>The application uses a <a class="reference external" href="https://www.postgresql.org/">PostgreSQL</a> data base and an
+<p>The application uses a <a class="reference external" href="https://www.postgresql.org/">PostgreSQL</a> database and an
 <a class="reference external" href="https://www.elastic.co/de/elasticsearch/">elastic search</a>
-data base as backends which are run in Docker containers.</p>
+database as backends which are run in Docker containers.</p>
 <p>Hence, the application requires installation of
 <a class="reference external" href="https://www.docker.com/products/docker-desktop">Docker Desktop</a> .</p>
 <p>In order to run the application some environment variables
@@ -168,7 +171,7 @@ file from <em>templates</em> folder into the root folder and set the
 variable <em>PGADMIN_DEFAULT_EMAIL</em> to some email address that
 is then used as login information for
 <a class="reference external" href="https://www.pgadmin.org/">PGAdmin</a> , a management tool for
-PostgreSQL data bases.</p>
+PostgreSQL databases.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>For the following steps we assume that a valid <em>.env</em> file is located in the package root.</p>
@@ -180,14 +183,14 @@ like the password for PostgreSQL or various ports.
 The latter might be necessary, if you should encounter
 any port conflicts for example.</p>
 </div>
-<p>If you want to change the data base connection information in the <em>.env</em> file,
+<p>If you want to change the database connection information in the <em>.env</em> file,
 please read the following note:</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If you alter PostgreSQL connection data, please note the following:</p>
 <p>One of the Docker containers connects to the
-PostgreSQL data base and builds the latest version
-of the application’s data base using <a class="reference external" href="https://alembic.sqlalchemy.org/en/latest/">alembic</a> .
+PostgreSQL database and builds the latest version
+of the application’s database using <a class="reference external" href="https://alembic.sqlalchemy.org/en/latest/">alembic</a> .
 In order to make that work, please also adjust the database
 urls in <em>./alembic/alembic.ini</em>, line 38 and in
 <em>./alembic/alembic_docker.ini</em>, line 38 (as the names suggest,
@@ -243,8 +246,8 @@ available commands, call:</p>
 <p>When configured as described above, prefect does not persist run-time information,
 i.e. prefect server loses any information about previous runs.</p>
 <p>Even though prefect in principle allows providing a storage location for
-its PostgreSQL backend, this is not very helpful under windows, as
-assigning windows drives conflicts with Linux user-permission in Windows.</p>
+its PostgreSQL backend, this is not very helpful under Windows, as
+assigning Windows hard drives conflicts with Linux user-permission in Windows.</p>
 <p>As a work-around you can use Docker managed drives. In order to do that,
 the file <em>./venv/Lib/site-packages/cli/docker-compose.yml</em> has to be
 modified. In order to see an example, please open the file
@@ -252,8 +255,8 @@ modified. In order to see an example, please open the file
 The essential modifications are in:</p>
 <ul class="simple">
 <li><p>Line 18: mapping the docker-managed drive “prefect_postgresdata_so_analysis” to <em>/var/lib/postgresql/data</em></p></li>
-<li><p>Line 19: mapping the back-up folder to <em>/pg_backup/</em> / this is relevant
-if you want to back-up the prefect data base / otherhwise you can skip these lines</p></li>
+<li><p>Line 19: mapping the back-up folder to <em>/pg_backup/</em>. Note that this is relevant
+if you want to back-up the prefect database. Otherwise you can skip these lines</p></li>
 <li><p>Line 147-148: defining the docker-managed drive <em>prefect_postgresdata_so_analysis</em></p></li>
 </ul>
 </div>

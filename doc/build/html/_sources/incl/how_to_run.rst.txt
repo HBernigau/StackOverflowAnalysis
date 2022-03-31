@@ -12,7 +12,7 @@ As a first step clone the repository:
    git clone https://github.com/HBernigau/StackOverflowAnalysis.git
    
 After executing this command the folder *StackOverflowAnalysis* will be downloaded into the target folder.
-change into that folder by typing
+Change into that folder by typing
 
 .. code-block:: bat
 
@@ -74,8 +74,8 @@ which can be considered as a best-practice for dependency management in Python. 
 
    .. image:: img/Screenshot_permission_error.png
 
-   Please switch to the user's *Appdata/Local/Temp* folder in Windows explorer, right click on that folder and chose the menue item *"Properties"*
-   from the context menue. In panel *General* uncheck the attribute *read-only* and in panel *Security* check the permissions and 
+   Please switch to the user's *AppData/Local/Temp* folder in Windows explorer, right click on that folder and choose the menu item *"Properties"*
+   from the context menu. In panel *General* uncheck the attribute *read-only* and in panel *Security* check the permissions and
    readjust if appropriate. Then re-run the previous command.
 
 .. note::
@@ -85,8 +85,8 @@ which can be considered as a best-practice for dependency management in Python. 
    which can be fixed temporarily by the following work-around: Use a pip version below 22.0 .
    
    The command for installing a specific pip version (21 here) is:
-   
-   .. code-block bat
+
+   .. code-block:: bat
    
       pip install pip==21
 
@@ -111,9 +111,9 @@ You can also use the frozen library versions first and update the libraries at a
 Start Docker containers
 -----------------------
 
-The application uses a `PostgreSQL <https://www.postgresql.org/>`_ data base and an
+The application uses a `PostgreSQL <https://www.postgresql.org/>`_ database and an
 `elastic search <https://www.elastic.co/de/elasticsearch/>`_
-data base as backends which are run in Docker containers.
+database as backends which are run in Docker containers.
 
 Hence, the application requires installation of
 `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ .
@@ -124,7 +124,7 @@ file from *templates* folder into the root folder and set the
 variable *PGADMIN_DEFAULT_EMAIL* to some email address that
 is then used as login information for
 `PGAdmin <https://www.pgadmin.org/>`_ , a management tool for
-PostgreSQL data bases.
+PostgreSQL databases.
 
 .. warning::
    
@@ -137,7 +137,7 @@ PostgreSQL data bases.
    The latter might be necessary, if you should encounter
    any port conflicts for example.
 
-If you want to change the data base connection information in the *.env* file,
+If you want to change the database connection information in the *.env* file,
 please read the following note:
 
 .. note::
@@ -145,8 +145,8 @@ please read the following note:
    If you alter PostgreSQL connection data, please note the following:
 
    One of the Docker containers connects to the
-   PostgreSQL data base and builds the latest version
-   of the application's data base using `alembic <https://alembic.sqlalchemy.org/en/latest/>`_ .
+   PostgreSQL database and builds the latest version
+   of the application's database using `alembic <https://alembic.sqlalchemy.org/en/latest/>`_ .
    In order to make that work, please also adjust the database
    urls in *./alembic/alembic.ini*, line 38 and in
    *./alembic/alembic_docker.ini*, line 38 (as the names suggest,
@@ -212,8 +212,8 @@ available commands, call:
    i.e. prefect server loses any information about previous runs.
 
    Even though prefect in principle allows providing a storage location for
-   its PostgreSQL backend, this is not very helpful under windows, as
-   assigning windows drives conflicts with Linux user-permission in Windows.
+   its PostgreSQL backend, this is not very helpful under Windows, as
+   assigning Windows hard drives conflicts with Linux user-permission in Windows.
 
    As a work-around you can use Docker managed drives. In order to do that,
    the file *./venv/Lib/site-packages/cli/docker-compose.yml* has to be
@@ -222,8 +222,8 @@ available commands, call:
    The essential modifications are in:
 
    - Line 18: mapping the docker-managed drive "prefect_postgresdata_so_analysis" to */var/lib/postgresql/data*
-   - Line 19: mapping the back-up folder to */pg_backup/* / this is relevant
-     if you want to back-up the prefect data base / otherhwise you can skip these lines
+   - Line 19: mapping the back-up folder to */pg_backup/*. Note that this is relevant
+     if you want to back-up the prefect database. Otherwise you can skip these lines
    - Line 147-148: defining the docker-managed drive *prefect_postgresdata_so_analysis*
 
 Run your first sample workflow

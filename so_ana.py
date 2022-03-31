@@ -101,7 +101,7 @@ def exc_comm():
 @exc_comm.command()
 @click.argument('n_workers', type=click.INT, default=4)
 def start_dask_cluster(n_workers):
-    """starts a local dask cluster with N_WORKER worker processes"""
+    """Starts a local dask cluster with N_WORKER worker processes"""
     mng_prod_container = management_deps.get_prod_container()
     scheduler_port = mng_prod_container.config.dask_scheduler_port()
     client = start_cluster(n_workers=n_workers, scheduler_port=scheduler_port)
@@ -126,7 +126,7 @@ def start_dask_cluster(n_workers):
                 type=click.INT,
                 default=100)
 def run_sample(nr_mapped):
-    """runs a simple sample flow where NR_MAPPED dummy tasks are mapped over"""
+    """Runs a simple sample flow where NR_MAPPED dummy tasks are mapped over"""
     start_tmest=datetime.now()
     print(' -> Start', start_tmest)
     flow = get_sample_flow()
@@ -139,20 +139,20 @@ def run_sample(nr_mapped):
 
 @exc_comm.command()
 def register_sample():
-    """registers the sample flow on prefect server"""
+    """Registers the sample flow on prefect server"""
     flow = get_sample_flow()
     flow.register(project_name='so_analysis')
 
 
 @exc_comm.command()
 def install_nltk_deps():
-    """downlad required nltk data"""
+    """Downloads required nltk data"""
     nltk.download('wordnet')
 
 
 @exc_comm.command()
 def visualize_sample():
-    """visualizes the sample flow on prefect server"""
+    """Visualizes the sample flow on prefect server"""
     flow = get_sample_flow()
     flow.visualize()
 
@@ -168,7 +168,7 @@ def register():
 
 @exc_comm.command()
 def visualize():
-    """visualizes the sample flow graph"""
+    """Visualizes the sample flow graph"""
     flow = so_ana_flow.get_flow()
     flow.visualize()
 
@@ -182,7 +182,7 @@ def visualize():
 
 def run(config_yaml, user_agent, from_email, test):
     """
-    excecutes the main flow in a dask cluster using the configuration config_yaml in configuration folder.
+    Excecutes the main flow in a dask cluster using the configuration config_yaml in configuration folder.
     """
     prefect.config.flows.checkpointing = True
     flow = so_ana_flow.get_flow()
@@ -265,7 +265,7 @@ def run(config_yaml, user_agent, from_email, test):
                                                   '--prod implies that all prod data is deleted.')
 def clear_db_data(test):
     """
-    Clears data in all data base data
+    Clears data in all databases
     """
     if test:
         modus_txt='test'
