@@ -260,19 +260,19 @@ before running the script, you should clear all previous data
 Then enter "localhost:8080" in your favorite Browser to open prefect server's UI.
 Change into Flows and select "so-analysis"
 
-.. image:: img/cover_prefect_UI.png
+.. image:: ./img/cover_prefect_UI.png
 
 Select the "Run" button and enter the flow parameters:
 
-.. image:: img/run_prefect_UI_001.png
+.. image:: ./img/run_prefect_UI_001.png
 
 In order to enable a test-run, open the *advanced run configurations*
 
-.. image:: img/run_prefect_UI_002.png
+.. image:: ./img/run_prefect_UI_002.png
 
 and enter modus test:
 
-.. image:: img/run_prefect_UI_003.png
+.. image:: ./img/run_prefect_UI_003.png
 
 After clicking the *run button*, a dashboard appears
 showing the run-time information of the flow.
