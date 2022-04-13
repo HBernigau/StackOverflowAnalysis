@@ -6,10 +6,16 @@
 #
 alembic==1.5.2
     # via -r requirements.in\db.txt
+allure-pytest==2.9.45
+    # via -r requirements.in\base.txt
+allure-python-commons==2.9.45
+    # via allure-pytest
 atomicwrites==1.4.0
     # via pytest
 attrs==20.3.0
-    # via pytest
+    # via
+    #   allure-python-commons
+    #   pytest
 beautifulsoup4==4.9.3
     # via -r requirements.in\base.txt
 certifi==2020.12.5
@@ -66,7 +72,9 @@ packaging==20.8
 pandas==1.2.1
     # via -r requirements.in\base.txt
 pluggy==0.13.1
-    # via pytest
+    # via
+    #   allure-python-commons
+    #   pytest
 psycopg2==2.8.6
     # via -r requirements.in\db.txt
 py==1.10.0
@@ -76,7 +84,9 @@ py==1.10.0
 pyparsing==2.4.7
     # via packaging
 pytest==6.2.1
-    # via -r requirements.in\base.txt
+    # via
+    #   -r requirements.in\base.txt
+    #   allure-pytest
 python-dateutil==2.8.1
     # via
     #   alembic
@@ -97,6 +107,8 @@ scipy==1.6.0
     # via gensim
 six==1.15.0
     # via
+    #   allure-pytest
+    #   allure-python-commons
     #   dependency-injector
     #   gensim
     #   langdetect

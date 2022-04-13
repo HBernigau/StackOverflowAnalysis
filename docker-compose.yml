@@ -87,6 +87,20 @@ services:
         depends_on:
             - so_ana_postgres
             - so_ana_elastic_search
+         
+    so_ana_allure:
+        build: ./Docker/allure
+        container_name: so_ana_allure_container
+        environment:
+            CHECK_RESULTS_EVERY_SECONDS: 5
+            KEEP_HISTORY: 1
+        ports:
+            - "${HOST_ALLURE}:5050"
+        volumes:
+            - ./Docker/directories/allure/results/:/app/allure-results/
+            - ./Docker/directories/allure/reports/:/app/default-reports/
+        networks: 
+            - so_ana_net
             
         
 volumes:

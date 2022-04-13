@@ -151,3 +151,7 @@ Docker/directories/es_backup/data/*
 !Docker/directories/es_backup/data/.do_not_ignore_folder
 Docker/directories/pg_backup/data/*
 !Docker/directories/pg_backup/data/.do_not_ignore_folder
+Docker/directories/allure/reports/*
+!Docker/directories/allure/reports/.do_not_ignore_folder
+Docker/directories/allure/results/*
+!Docker/directories/allure/results/.do_not_ignore_folder
