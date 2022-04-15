@@ -88,11 +88,6 @@ def flatten_ls(ls, base=None):
             base += flatten_ls(item)
         return base
 
-def get_null_logger():
-    fb_null_logger = logging.getLogger('downloader logger')
-    fb_null_logger.setLevel(logging.DEBUG)
-    fb_null_logger.addHandler(logging.NullHandler())
-    return fb_null_logger
 
 class TstHandler(StreamHandler):
 

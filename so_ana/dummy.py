@@ -1,2 +1,2 @@
-def dummy_func():
-    return 42
+import typing
+

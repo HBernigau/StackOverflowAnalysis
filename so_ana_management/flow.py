@@ -26,6 +26,7 @@ import traceback
 import sys
 import marshmallow_dataclass
 
+import so_ana.step_download_posts.domain
 import so_ana_management.management_utils as so_ana_mu
 import so_ana_management.management_deps as management_deps
 import so_ana_util
@@ -391,9 +392,9 @@ def get_page_number(step_info: so_ana_mu.StepRequest,
     # tst_outp_handler.reset_loglist()
     topic=flow_info.topic
 
-    nr_pages = extract_posts.extract_nr_pages(logger=logger,
-                                              downloader=downloader,
-                                              topic=topic)
+    nr_pages = so_ana.step_download_posts.domain.extract_nr_pages(logger=logger,
+                                                                  downloader=downloader,
+                                                                  topic=topic)
     logger.info(f'Number of pages: {nr_pages}')
     batches = [so_ana_mu.PageCountReport(   step=step_info.step,
                                             label=step_info.label,
@@ -487,14 +488,14 @@ def download_pages(step_info: so_ana_mu.StepRequest,
     for i in range(batch_id, page_nr, batch.divisor):
         try:
             logger.info(f'Extracting page {i + 1}')
-            dwnl_page_res = extract_posts.download_page(downloader=downloader,
-                                                        topic=topic,
-                                                        logger=logger,
-                                                        step=step,
-                                                        step_label=step_label,
-                                                        ord_key=i,
-                                                        modus=prefect.context.modus
-                                                        )
+            dwnl_page_res = so_ana.step_download_posts.domain.download_page(downloader=downloader,
+                                                                            topic=topic,
+                                                                            logger=logger,
+                                                                            step=step,
+                                                                            step_label=step_label,
+                                                                            ord_key=i,
+                                                                            modus=prefect.context.modus
+                                                                            )
             res_log_entry = so_ana_mu.PageResult(   step=step,
                                                     step_label=step_label,
                                                     ord_key=i,
@@ -533,15 +534,15 @@ def download_pages(step_info: so_ana_mu.StepRequest,
 
         try:
             logger.info(f'Start extracting results from page {i+1}')
-            extr_pages_info = extract_posts.extract_meta(dwnl_page_res.raw_page_content,
-                                                         logger=logger,
-                                                         step=step,
-                                                         step_label=step_label,
-                                                         ord_key_generator=ord_key_generator,
-                                                         test_fraction=flow_info.ml_opts.test_fraction,
-                                                         val_fraction=flow_info.ml_opts.val_fraction,
-                                                         modus=prefect.context.modus
-                                                         )
+            extr_pages_info = so_ana.step_download_posts.domain.extract_meta(dwnl_page_res.raw_page_content,
+                                                                             logger=logger,
+                                                                             step=step,
+                                                                             step_label=step_label,
+                                                                             ord_key_generator=ord_key_generator,
+                                                                             test_fraction=flow_info.ml_opts.test_fraction,
+                                                                             val_fraction=flow_info.ml_opts.val_fraction,
+                                                                             modus=prefect.context.modus
+                                                                             )
         except Exception as exc:
             logger.error(f'Error when extracting posts on page {i+1} (ord_key={i})' )
 
@@ -684,14 +685,14 @@ def download_posts(step_info: so_ana_mu.StepRequest,
             post_id = row['post_id']
             ord_key = row['ord_key']
             ml_tag = row['ml_tag']
-            download_res = extract_posts.download_post(downloader=downloader,
-                                                       logger=logger,
-                                                       step=step_info.step,
-                                                       step_label=step_info.label,
-                                                       post_id=post_id,
-                                                       ord_key=ord_key,
-                                                       ml_tag=ml_tag,
-                                                       modus=prefect.context.modus)
+            download_res = so_ana.step_download_posts.domain.download_post(downloader=downloader,
+                                                                           logger=logger,
+                                                                           step=step_info.step,
+                                                                           step_label=step_info.label,
+                                                                           post_id=post_id,
+                                                                           ord_key=ord_key,
+                                                                           ml_tag=ml_tag,
+                                                                           modus=prefect.context.modus)
             deps.save_to_db(data=download_res.raw_post_content,
                             key_lst = ['step', 'step_label', 'ord_key'],
                             to_pg=False,
